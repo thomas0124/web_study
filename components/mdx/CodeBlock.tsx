@@ -50,10 +50,8 @@ function extractLangAndCode(children: React.ReactNode): {
   if (!match) return null;
 
   const lang = match[1];
-  const code =
-    typeof childProps.children === "string"
-      ? childProps.children.trimEnd()
-      : "";
+  if (typeof childProps.children !== "string") return null;
+  const code = childProps.children.trimEnd();
 
   return { lang, code };
 }
