@@ -1,4 +1,4 @@
-import { getLesson, getCourse, getCourses, getAllLessonPaths } from "@/lib/content";
+import { getLesson, getCourse, getAllLessonPaths } from "@/lib/content";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { MDXRemote } from "next-mdx-remote/rsc";

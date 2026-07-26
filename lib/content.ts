@@ -63,7 +63,7 @@ export function getCourse(courseSlug: string): Course | null {
   const meta = readCourseMeta(dir);
   const files = getLessonFiles(dir);
   const lessons: LessonMeta[] = files.map((f) => {
-    const { content: _c, ...lessonMeta } = parseLessonFile(
+    const { content: _content, ...lessonMeta } = parseLessonFile(
       path.join(CONTENT_DIR, dir, "lessons", f),
       courseSlug
     );
@@ -93,10 +93,10 @@ export function getLesson(
   if (idx === -1) return null;
 
   const lesson = allLessons[idx];
-  const prev = idx > 0 ? (({ content: _c, ...m }) => m)(allLessons[idx - 1]) : null;
+  const prev = idx > 0 ? (({ content: _content, ...m }) => m)(allLessons[idx - 1]) : null;
   const next =
     idx < allLessons.length - 1
-      ? (({ content: _c, ...m }) => m)(allLessons[idx + 1])
+      ? (({ content: _content, ...m }) => m)(allLessons[idx + 1])
       : null;
 
   return { ...lesson, prev, next };
