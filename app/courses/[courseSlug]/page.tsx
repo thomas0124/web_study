@@ -2,6 +2,7 @@ import { getCourse, getCourses } from "@/lib/content";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { levelColors } from "@/lib/level-colors";
 
 interface Props {
   params: Promise<{ courseSlug: string }>;
@@ -20,12 +21,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: course.description,
   };
 }
-
-const levelColors = {
-  入門: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-  中級: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
-  上級: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
-};
 
 export default async function CoursePage({ params }: Props) {
   const { courseSlug } = await params;

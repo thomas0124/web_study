@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import Sidebar from "@/components/Sidebar";
 import LessonNav from "@/components/LessonNav";
-import Callout from "@/components/mdx/Callout";
+import { mdxComponents } from "@/components/mdx";
 import Link from "next/link";
 
 interface Props {
@@ -24,8 +24,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: lesson.description,
   };
 }
-
-const mdxComponents = { Callout };
 
 export default async function LessonPage({ params }: Props) {
   const { courseSlug, lessonSlug } = await params;

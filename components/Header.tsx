@@ -18,7 +18,7 @@ export default function Header() {
             コース一覧
           </Link>
           <a
-            href="https://github.com"
+            href="https://github.com/thomas0124/web_study"
             target="_blank"
             rel="noopener noreferrer"
             className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
