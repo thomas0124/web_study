@@ -24,6 +24,7 @@ const RUNNABLE_LANGS: Record<string, SandpackTemplate> = {
   jsx: "react",
   tsx: "react-ts",
   html: "static",
+  css: "static",
 };
 
 const ENTRY_FILES: Record<SandpackTemplate, string> = {
@@ -33,6 +34,31 @@ const ENTRY_FILES: Record<SandpackTemplate, string> = {
   "react-ts": "/App.tsx",
   static: "/index.html",
 };
+
+// Demo HTML wrapper so CSS styles have elements to apply to
+function wrapCss(css: string): string {
+  return `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<style>
+body { font-family: sans-serif; padding: 16px; }
+${css}
+</style>
+</head>
+<body>
+<h1>見出し1</h1>
+<h2>見出し2</h2>
+<p>段落テキスト。<strong>太字</strong>や<a href="#">リンク</a>も含みます。</p>
+<button class="btn">ボタン</button>
+<ul>
+  <li class="item">リスト項目 1</li>
+  <li class="item">リスト項目 2</li>
+</ul>
+<div class="box">div.box</div>
+</body>
+</html>`;
+}
 
 function extractLangAndCode(children: React.ReactNode): {
   lang: string;
@@ -66,7 +92,7 @@ export default function CodeBlock({ children }: CodeBlockProps) {
 
   if (!extracted) {
     return (
-      <pre className="rounded-lg bg-gray-900 dark:bg-gray-950 p-4 overflow-x-auto text-sm my-6">
+      <pre className="rounded-lg bg-gray-900 dark:bg-gray-950 p-4 overflow-x-auto text-sm my-6 text-gray-100">
         {children}
       </pre>
     );
@@ -77,26 +103,43 @@ export default function CodeBlock({ children }: CodeBlockProps) {
 
   if (!template) {
     return (
-      <pre className="rounded-lg bg-gray-900 dark:bg-gray-950 p-4 overflow-x-auto text-sm my-6">
+      <pre className="rounded-lg bg-gray-900 dark:bg-gray-950 p-4 overflow-x-auto text-sm my-6 text-gray-100">
         {children}
       </pre>
     );
   }
 
+  // CSS blocks: wrap in demo HTML so styles are visible
+  const isCss = lang === "css";
+  const fileContent = isCss ? wrapCss(code) : code;
   const entryFile = ENTRY_FILES[template];
-  const showConsole = template === "vanilla" || template === "vanilla-ts";
+
+  // vanilla/vanilla-ts: show Preview (DOM) + Console (logs) stacked
+  const isVanilla = template === "vanilla" || template === "vanilla-ts";
 
   return (
     <div className="my-6 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
       <SandpackProvider
         template={template}
-        files={{ [entryFile]: code }}
+        files={{ [entryFile]: fileContent }}
         theme="dark"
       >
         <SandpackLayout>
-          <SandpackCodeEditor showLineNumbers showInlineErrors style={{ height: 300 }} />
-          {showConsole ? (
-            <SandpackConsole style={{ height: 300 }} />
+          <SandpackCodeEditor
+            showLineNumbers
+            showInlineErrors
+            style={{ height: isVanilla ? 280 : 300 }}
+          />
+          {isVanilla ? (
+            <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
+              <SandpackPreview
+                showNavigator={false}
+                style={{ height: 180, flex: "none" }}
+              />
+              <SandpackConsole
+                style={{ height: 100, flex: "none", borderTop: "1px solid #2d2d2d" }}
+              />
+            </div>
           ) : (
             <SandpackPreview showNavigator={false} style={{ height: 300 }} />
           )}
