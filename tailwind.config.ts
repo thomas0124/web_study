@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import typography from "@tailwindcss/typography";
 
 const config: Config = {
   content: [
@@ -9,19 +10,21 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-geist-sans)", "sans-serif"],
-        mono: ["var(--font-geist-mono)", "monospace"],
+        sans: ["var(--font-noto-sans-jp)", "Noto Sans JP", "sans-serif"],
+        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
       typography: {
         DEFAULT: {
           css: {
             maxWidth: "none",
+            "code::before": { content: '""' },
+            "code::after": { content: '""' },
           },
         },
       },
     },
   },
-  plugins: [],
+  plugins: [typography],
 };
 
 export default config;
