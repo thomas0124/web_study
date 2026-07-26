@@ -1,14 +1,10 @@
 import type { MDXComponents } from "mdx/types";
 import Callout from "./Callout";
+import CodeBlock from "./CodeBlock";
 
 export const mdxComponents: MDXComponents = {
   Callout,
-  pre: (props) => (
-    <pre
-      {...props}
-      className="rounded-lg bg-gray-900 dark:bg-gray-950 p-4 overflow-x-auto text-sm my-6"
-    />
-  ),
+  pre: CodeBlock,
   code: ({ children, className, ...props }) => {
     const isBlock = className?.startsWith("language-");
     if (isBlock) {
