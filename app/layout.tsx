@@ -29,6 +29,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja" className={notoSansJP.variable}>
+      <head>
+        {/* フラッシュなしでダークモードを初期化 */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var t=localStorage.getItem('theme');if(t==='dark'||(t===null&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}})()`,
+          }}
+        />
+      </head>
       <body className="min-h-screen flex flex-col bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 font-sans">
         <Header />
         <main className="flex-1">{children}</main>
