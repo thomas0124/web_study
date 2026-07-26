@@ -6,6 +6,7 @@ import Sidebar from "@/components/Sidebar";
 import LessonNav from "@/components/LessonNav";
 import { mdxComponents } from "@/components/mdx";
 import Link from "next/link";
+import remarkGfm from "remark-gfm";
 
 interface Props {
   params: Promise<{ courseSlug: string; lessonSlug: string }>;
@@ -75,7 +76,11 @@ export default async function LessonPage({ params }: Props) {
           </header>
 
           <div className="prose prose-gray dark:prose-invert max-w-none prose-pre:p-0 prose-pre:bg-transparent prose-code:before:content-none prose-code:after:content-none">
-            <MDXRemote source={lesson.content} components={mdxComponents} />
+            <MDXRemote
+              source={lesson.content}
+              components={mdxComponents}
+              options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
+            />
           </div>
 
           <LessonNav

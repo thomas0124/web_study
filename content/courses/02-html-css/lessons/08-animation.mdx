@@ -9,7 +9,7 @@ CSSで要素に動きを加えるには主に2つの方法があります：
 
 | 方法 | 特徴 | 用途 |
 |------|------|------|
-| `transition` | 状態変化時のみ動く | ホバー・フォーカス・クリ���ク |
+| `transition` | 状態変化時のみ動く | ホバー・フォーカス・クリック |
 | `animation` | 自動で繰り返せる | ローディング・装飾アニメーション |
 
 ## transition（トランジション）
@@ -84,10 +84,10 @@ CSSで要素に動きを加えるには主に2つの方法があります：
 ```css
 .element {
   animation-name: fade-in;           /* keyframes名 */
-  animation-duration: 1s;            /* 1回の時�� */
+  animation-duration: 1s;            /* 1回の時間 */
   animation-timing-function: ease;   /* イージング */
-  animation-delay: 0.2s;             /* 開始遅�� */
-  animation-iteration-count: 3;      /* 繰り返し回数（infinite = 無限�� */
+  animation-delay: 0.2s;             /* 開始遅延 */
+  animation-iteration-count: 3;      /* 繰り返し回数（infinite = 無限に */
   animation-direction: alternate;    /* 方向（alternate = 往復） */
   animation-fill-mode: forwards;     /* 終了後の状態 */
   animation-play-state: running;     /* 再生状態 */
@@ -147,7 +147,7 @@ CSSアニメーションは`transform`と`opacity`のみを使うと、GPUでレ
 }
 ```
 
-## まと��
+## まとめ
 
 - `transition`は状態変化を滑らかにする（ホバーなど）
 - `@keyframes`と`animation`で自動・繰り返しアニメーションを作る
