@@ -1,9 +1,11 @@
 import type { MDXComponents } from "mdx/types";
 import Callout from "./Callout";
 import CodeBlock from "./CodeBlock";
+import Quiz from "./Quiz";
 
 export const mdxComponents: MDXComponents = {
   Callout,
+  Quiz,
   pre: CodeBlock,
   code: ({ children, className, ...props }) => {
     const isBlock = className?.startsWith("language-");
