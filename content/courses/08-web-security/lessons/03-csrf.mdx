@@ -1,0 +1,120 @@
+---
+title: CSRF攻撃と対策
+description: クロスサイトリクエストフォージェリ（CSRF）の仕組みと、SameSite・CSRFトークンによる防御を学ぶ
+---
+
+## CSRFとは
+
+**CSRF（Cross-Site Request Forgery）**は攻撃者サイトから被害者のブラウザを通じて正規サイトへの不正なリクエストを送らせる攻撃です。
+
+## 攻撃の仕組み
+
+1. 被害者が正規サイト（bank.example.com）にログイン済み
+2. 攻撃者が用意した罠サイトを被害者が閲覧
+3. 罠サイトのHTMLが自動的に銀行への送金リクエストを送信
+4. ブラウザは自動的にログイン済みCookieを付けてリクエストを送る
+
+```html
+<!-- 罠サイトのHTML（見えない画像として自動実行） -->
+<img src="https://bank.example.com/transfer?to=attacker&amount=100000" />
+
+<!-- または自動サブミットのフォーム -->
+<form action="https://bank.example.com/transfer" method="POST">
+  <input type="hidden" name="to" value="attacker" />
+  <input type="hidden" name="amount" value="100000" />
+</form>
+<script>document.forms[0].submit()</script>
+```
+
+## 対策
+
+### 1. SameSite Cookie（最も強力）
+
+Cookieに`SameSite`属性を付けて、クロスサイトリクエストで送信されないようにする：
+
+```javascript
+res.cookie("sessionId", token, {
+  sameSite: "strict", // 別サイトからのリクエストではCookieを送らない
+  httpOnly: true,
+  secure: true,
+});
+```
+
+| SameSite値 | 動作 |
+|-----------|------|
+| `strict` | 別サイトからのリクエストでは絶対にCookieを送らない |
+| `lax` | GETのみ許可（フォームPOSTは送らない）。デフォルト値 |
+| `none` | 制限なし（`Secure`必須） |
+
+### 2. CSRFトークン
+
+予測不可能なランダムトークンをリクエストに含め、サーバーで検証する：
+
+```javascript
+import crypto from "crypto";
+
+// セッションにCSRFトークンを保存
+app.use((req, res, next) => {
+  if (!req.session.csrfToken) {
+    req.session.csrfToken = crypto.randomBytes(32).toString("hex");
+  }
+  next();
+});
+
+// フォームにCSRFトークンを埋め込む
+app.get("/form", (req, res) => {
+  res.render("form", { csrfToken: req.session.csrfToken });
+});
+
+// リクエスト検証
+app.post("/transfer", (req, res) => {
+  if (req.body.csrfToken !== req.session.csrfToken) {
+    return res.status(403).json({ error: "CSRF検証失敗" });
+  }
+  // 処理続行
+});
+```
+
+### 3. Originヘッダーの検証
+
+```javascript
+app.use((req, res, next) => {
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
+    const origin = req.headers.origin;
+    const allowedOrigins = ["https://myapp.com", "https://www.myapp.com"];
+
+    if (origin && !allowedOrigins.includes(origin)) {
+      return res.status(403).json({ error: "不正なOrigin" });
+    }
+  }
+  next();
+});
+```
+
+### 4. JWT（Authorizationヘッダー）の活用
+
+AuthorizationヘッダーはJavaScriptでしか設定できないため、CSRFが自動送信できない：
+
+```javascript
+// フロントエンド: LocalStorageのJWTをヘッダーに付ける
+fetch("/api/transfer", {
+  method: "POST",
+  headers: {
+    "Authorization": `Bearer ${localStorage.getItem("token")}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ to: "friend", amount: 1000 }),
+});
+```
+
+<Callout type="info" title="SPAとCSRF">
+React/Vue/Next.jsなどのSPAでJWTをLocalStorageに保存してAuthorizationヘッダーで送る場合、CSRFの脅威は低くなります（Cookieを使わないため）。ただしXSSに対してLocalStorageは無防備なため、XSS対策は必須です。
+</Callout>
+
+## まとめ
+
+- CSRFは攻撃者サイトから被害者のCookieを使った不正リクエストを送る攻撃
+- `SameSite=strict`が最もシンプルかつ強力な対策
+- CSRFトークンでリクエストの正当性を検証
+- Originヘッダーでリクエストのオリジンをサーバーで検証
+- SPAでJWT+Authorizationヘッダーを使えばCSRFリスクを低減できる

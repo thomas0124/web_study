@@ -1,0 +1,168 @@
+---
+title: CI/CD入門
+description: GitHub ActionsでCIパイプライン（テスト・リント・ビルド）とCD（自動デプロイ）を構築する方法を学ぶ
+---
+
+## CI/CDとは
+
+**CI（Continuous Integration）**は、コードをリポジトリにプッシュするたびに自動でテスト・リント・ビルドを実行する仕組みです。
+
+**CD（Continuous Delivery/Deployment）**は、CIを通過したコードを自動でデプロイする仕組みです。
+
+```
+コードプッシュ → CIパイプライン → デプロイ
+                   ↓
+              [リント] → [型チェック] → [テスト] → [ビルド]
+              ↑問題があれば失敗してデプロイをブロック
+```
+
+## GitHub Actions
+
+**GitHub Actions**はGitHubに組み込まれたCI/CDサービスです。`.github/workflows/`ディレクトリにYAMLファイルを置くだけで設定できます。
+
+### 基本的なCIワークフロー
+
+```yaml
+# .github/workflows/ci.yml
+name: CI
+
+on:
+  push:
+    branches: [main, feat/*]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        run: pnpm tsc --noEmit
+
+      - name: Lint
+        run: pnpm eslint .
+
+      - name: Test
+        run: pnpm test --run
+
+      - name: Build
+        run: pnpm build
+```
+
+### 環境変数とシークレット
+
+```yaml
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to production
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          API_KEY: ${{ secrets.API_KEY }}
+        run: pnpm deploy:prod
+```
+
+シークレットはGitHubリポジトリの`Settings > Secrets and variables > Actions`で設定します。
+
+### PRに自動コメント
+
+```yaml
+- name: Test coverage comment
+  uses: actions/github-script@v7
+  with:
+    script: |
+      github.rest.issues.createComment({
+        issue_number: context.issue.number,
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        body: 'テストカバレッジ: 85%'
+      })
+```
+
+## CDパイプライン例（Vercelへの自動デプロイ）
+
+```yaml
+# .github/workflows/deploy.yml
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [lint-and-test] # CIが通った後にデプロイ
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.ORG_ID }}
+          vercel-project-id: ${{ secrets.PROJECT_ID }}
+          vercel-args: "--prod"
+```
+
+## 並列化でCIを高速化
+
+```yaml
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps: [...]  # リントのみ
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps: [...]  # 型チェックのみ
+
+  test:
+    runs-on: ubuntu-latest
+    steps: [...]  # テストのみ
+
+  deploy:
+    needs: [lint, typecheck, test]  # 全部通ったらデプロイ
+    runs-on: ubuntu-latest
+    steps: [...]
+```
+
+<Callout type="tip" title="マトリックスビルド">
+複数のNode.jsバージョン・OSで同時にテストできます：
+
+```yaml
+strategy:
+  matrix:
+    node-version: [18, 20, 22]
+    os: [ubuntu-latest, windows-latest]
+runs-on: ${{ matrix.os }}
+```
+</Callout>
+
+## まとめ
+
+- CIはコードプッシュのたびにテスト・リント・ビルドを自動実行
+- GitHub Actionsは`.github/workflows/*.yml`で設定
+- シークレットはGitHubのSettings画面で安全に管理
+- CDはCIをパスしたコードを自動デプロイ
+- ジョブを並列化してCIの実行時間を短縮できる

@@ -1,0 +1,186 @@
+---
+title: 配列とオブジェクト
+description: JavaScriptのデータ構造である配列とオブジェクトの操作方法を習得する
+---
+
+## 配列（Array）
+
+配列は複数の値を順序付きでまとめたデータ構造です。
+
+```javascript
+// 配列の作成
+const fruits = ["りんご", "バナナ", "みかん"];
+
+// インデックスでアクセス（0始まり）
+fruits[0]  // "りんご"
+fruits[2]  // "みかん"
+fruits[-1] // undefined（負のインデックスは使えない）
+
+// 末尾から: at(-1)
+fruits.at(-1) // "みかん"
+```
+
+### 配列の操作メソッド
+
+```javascript
+const arr = [1, 2, 3];
+
+// 末尾への追加・削除
+arr.push(4);    // [1, 2, 3, 4]
+arr.pop();      // [1, 2, 3]、削除した値(4)を返す
+
+// 先頭への追加・削除
+arr.unshift(0); // [0, 1, 2, 3]
+arr.shift();    // [1, 2, 3]、削除した値(0)を返す
+
+// 結合
+arr.concat([4, 5]); // [1, 2, 3, 4, 5]（元は変更しない）
+[...arr, 4, 5];     // スプレッド構文で同じことができる
+
+// 一部を取り出す
+arr.slice(1, 3);  // [2, 3]（index 1〜2）
+arr.slice(-2);    // [2, 3]（末尾から2つ）
+
+// ソート
+[3, 1, 2].sort();           // [1, 2, 3]（文字列比較！）
+[3, 1, 2].sort((a, b) => a - b); // [1, 2, 3]（数値比較）
+
+// 検索
+arr.includes(2);     // true
+arr.indexOf(2);      // 1（見つからない場合-1）
+
+// 変換
+arr.join(", ");      // "1, 2, 3"
+arr.flat();          // ネストした配列をフラットに
+arr.flatMap(n => [n, n * 2]); // mapしてからflat
+```
+
+### スプレッド構文（配列）
+
+```javascript
+const a = [1, 2, 3];
+const b = [4, 5, 6];
+
+// 結合
+const combined = [...a, ...b]; // [1, 2, 3, 4, 5, 6]
+
+// コピー
+const copy = [...a]; // [1, 2, 3]（独立したコピー）
+
+// 分割代入
+const [first, second, ...rest] = [1, 2, 3, 4, 5];
+// first=1, second=2, rest=[3,4,5]
+```
+
+## オブジェクト（Object）
+
+オブジェクトはキーと値のペア（プロパティ）の集まりです。
+
+```javascript
+const user = {
+  name: "田中太郎",
+  age: 25,
+  city: "東京",
+  isActive: true,
+};
+
+// プロパティへのアクセス
+user.name          // "田中太郎"
+user["name"]       // "田中太郎"（変数のキーも使える）
+
+const key = "age";
+user[key]          // 25
+
+// プロパティの追加・変更
+user.email = "tanaka@example.com";
+user.age = 26;
+
+// プロパティの削除
+delete user.city;
+```
+
+### オブジェクトの操作
+
+```javascript
+// キー・値・エントリーの取得
+Object.keys(user);    // ["name", "age", "isActive", "email"]
+Object.values(user);  // ["田中太郎", 26, true, "tanaka@..."]
+Object.entries(user); // [["name", "田中太郎"], ["age", 26], ...]
+
+// オブジェクトの結合
+const defaults = { theme: "light", lang: "ja" };
+const settings = { lang: "en", fontSize: 16 };
+const merged = { ...defaults, ...settings };
+// { theme: "light", lang: "en", fontSize: 16 }（後から上書き）
+
+// Object.assign
+Object.assign({}, defaults, settings); // 同じ結果
+```
+
+### スプレッド構文（オブジェクト）
+
+```javascript
+const user = { name: "田中", age: 25 };
+
+// コピー（シャローコピー）
+const copy = { ...user };
+
+// プロパティを追加したコピー
+const updated = { ...user, age: 26, email: "new@example.com" };
+```
+
+### 分割代入（Destructuring）
+
+```javascript
+const person = { name: "田中", age: 25, city: "東京" };
+
+// 基本
+const { name, age } = person;
+
+// 別名で受け取る
+const { name: userName, city: hometown } = person;
+
+// デフォルト値
+const { name, role = "user" } = person;
+
+// ネストしたオブジェクト
+const { address: { prefecture } } = { address: { prefecture: "東京都" } };
+
+// 残余
+const { name: n, ...rest } = person;
+// n = "田中", rest = { age: 25, city: "東京" }
+```
+
+## 配列とオブジェクトのよくある操作パターン
+
+```javascript
+// オブジェクトの配列を操作
+const users = [
+  { name: "田中", age: 25 },
+  { name: "鈴木", age: 30 },
+  { name: "佐藤", age: 20 },
+];
+
+// 名前だけ取り出す
+const names = users.map(u => u.name);
+
+// 年齢でソート
+const sorted = [...users].sort((a, b) => a.age - b.age);
+
+// 25歳以上を抽出
+const adults = users.filter(u => u.age >= 25);
+
+// 名前でオブジェクトを作る（辞書化）
+const byName = Object.fromEntries(users.map(u => [u.name, u]));
+```
+
+<Callout type="note" title="シャローコピーとディープコピー">
+スプレッド構文や`Object.assign`は**シャローコピー**（表面1層のみコピー）です。ネストしたオブジェクトや配列は参照が共有されます。完全なコピーが必要なら`structuredClone()`を使いましょう。
+</Callout>
+
+## まとめ
+
+- 配列はpush/pop/filter/map/reduceなど豊富なメソッドで操作する
+- スプレッド構文で配列・オブジェクトのコピーや結合ができる
+- 分割代入でプロパティを簡潔に取り出せる
+- `Object.keys/values/entries`でオブジェクトを反復処理できる

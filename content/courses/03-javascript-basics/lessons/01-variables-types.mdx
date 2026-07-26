@@ -1,0 +1,161 @@
+---
+title: 変数と型
+description: JavaScriptの変数宣言（let/const/var）とデータ型を理解する
+---
+
+## JavaScriptとは
+
+**JavaScript**はWebブラウザ上で動作するプログラミング言語です。HTMLが骨格、CSSが見た目なら、JavaScriptはWebページに動きと対話性を与えます。
+
+現在はNode.jsを通じてサーバーサイドでも動作し、フロントエンドからバックエンドまで幅広く使われています。
+
+## 変数の宣言
+
+JavaScriptには3つの変数宣言方法があります。
+
+```javascript
+// const: 再代入不可（推奨）
+const name = "田中太郎";
+
+// let: 再代入可能
+let count = 0;
+count = 1; // OK
+
+// var: 古い方法（非推奨）
+var old = "使わない";
+```
+
+**原則としてconstを使い、再代入が必要なときだけletを使います。**
+
+### constとletの使い分け
+
+```javascript
+// 変更しない値 → const
+const API_URL = "https://api.example.com";
+const MAX_SIZE = 100;
+
+// ループカウンタなど変化する値 → let
+let i = 0;
+let isLoading = false;
+```
+
+## データ型
+
+JavaScriptのデータ型は**プリミティブ型**と**オブジェクト型**に分かれます。
+
+### プリミティブ型
+
+```javascript
+// string（文字列）
+const str1 = "ダブルクォート";
+const str2 = 'シングルクォート';
+const str3 = `テンプレートリテラル: ${name}さん`; // 変数埋め込み可
+
+// number（数値）
+const int = 42;
+const float = 3.14;
+const inf = Infinity;
+const notNum = NaN; // "Not a Number"
+
+// boolean（真偽値）
+const isTrue = true;
+const isFalse = false;
+
+// null（意図的な「値なし」）
+const empty = null;
+
+// undefined（未定義・値が設定されていない）
+let notDefined; // undefined
+const obj = {};
+console.log(obj.foo); // undefined
+
+// symbol（ユニークな識別子）
+const sym = Symbol("id");
+
+// bigint（大きな整数）
+const big = 9007199254740991n;
+```
+
+### 型の確認
+
+```javascript
+typeof "hello"    // "string"
+typeof 42         // "number"
+typeof true       // "boolean"
+typeof undefined  // "undefined"
+typeof null       // "object" ← 歴史的なバグ
+typeof {}         // "object"
+typeof []         // "object"
+typeof function(){} // "function"
+```
+
+## 型変換
+
+### 明示的な変換
+
+```javascript
+// 文字列 → 数値
+Number("42")        // 42
+Number("abc")       // NaN
+parseInt("42px")    // 42
+parseFloat("3.14m") // 3.14
+
+// 数値 → 文字列
+String(42)          // "42"
+(42).toString()     // "42"
+
+// 任意 → 真偽値
+Boolean(0)          // false
+Boolean("")         // false
+Boolean(null)       // false
+Boolean(undefined)  // false
+Boolean(NaN)        // false
+Boolean(1)          // true
+Boolean("text")     // true
+```
+
+### 暗黙的な変換（注意が必要）
+
+```javascript
+"3" + 1   // "31"（文字列結合）
+"3" - 1   // 2（数値演算）
+"3" * 2   // 6（数値演算）
+```
+
+<Callout type="warning" title="===と==の違い">
+`==`は型変換してから比較（「緩い等価」）、`===`は型も含めて厳密に比較します。  
+`0 == false` → `true`  
+`0 === false` → `false`  
+基本的に`===`を使いましょう。
+</Callout>
+
+## テンプレートリテラル
+
+バッククォートを使うと変数や式を文字列に埋め込めます：
+
+```javascript
+const user = "田中";
+const score = 95;
+
+// 古い書き方
+const msg1 = "こんにちは、" + user + "さん！スコア: " + score + "点";
+
+// テンプレートリテラル
+const msg2 = `こんにちは、${user}さん！スコア: ${score}点`;
+
+// 複数行
+const html = `
+  <div>
+    <h1>${user}</h1>
+    <p>スコア: ${score}</p>
+  </div>
+`;
+```
+
+## まとめ
+
+- 変数宣言は原則`const`、再代入が必要なら`let`
+- JavaScriptの型はstring・number・boolean・null・undefinedなど
+- `typeof`で型を確認できる
+- 比較は`===`を使う
+- テンプレートリテラルで文字列操作を簡潔に書ける

@@ -1,0 +1,164 @@
+---
+title: Flexbox
+description: CSSのFlexboxを使って横並び・中央揃えなど���軟なレイアウ���を実現する
+---
+
+## Flexboxとは
+
+**Flexbox（Flexible Box Layout）**は、CSSの1次元レイアウトシステムです。子要素を横方向または縦方向に柔軟に並べることができます。
+
+以前はfloatやinline-blockで実現していた横並びレイアウトが、Flexboxで直感的に書けるようになりました。
+
+## 基本的な使い方
+
+```css
+.container {
+  display: flex;
+}
+```
+
+`display: flex`を指定した要素が**フレックスコンテナ**になり、直接の子要素が**フレックスアイテム**になります。
+
+```html
+<div class="container">
+  <div class="item">1</div>
+  <div class="item">2</div>
+  <div class="item">3</div>
+</div>
+```
+
+## コンテナのプロパティ
+
+### flex-direction（並べる方向）
+
+```css
+.container {
+  flex-direction: row;         /* 横並び（デフ���ルト） */
+  flex-direction: row-reverse; /* 横並び・逆順 */
+  flex-direction: column;      /* 縦並び */
+  flex-direction: column-reverse; /* 縦並び・逆順 */
+}
+```
+
+### justify-content（主軸方向の揃え）
+
+主軸はflex-directionで決まる方向です（デフォルトは横）。
+
+```css
+.container {
+  justify-content: flex-start;    /* 左揃え（デフォルト） */
+  justify-content: flex-end;      /* 右揃え */
+  justify-content: center;        /* 中央揃え */
+  justify-content: space-between; /* 両端に配置、間隔均等 */
+  justify-content: space-around;  /* 各要素の両側に均等な余白 */
+  justify-content: space-evenly;  /* すべての間隔が均等 */
+}
+```
+
+### align-items（交差軸方向の揃え）
+
+交差軸はflex-directionの垂直方向です（デフォルトは縦）。
+
+```css
+.container {
+  align-items: stretch;     /* 高さを揃える（デフォルト） */
+  align-items: flex-start;  /* 上揃え */
+  align-items: flex-end;    /* 下揃�� */
+  align-items: center;      /* 垂直中央 */
+  align-items: baseline;    /* テキストのベースラインで揃え */
+}
+```
+
+### flex-wrap（折り返し）
+
+```css
+.container {
+  flex-wrap: nowrap;   /* 折り返しなし（デフォルト） */
+  flex-wrap: wrap;     /* 折り返しあり */
+}
+```
+
+### gap（アイテム間の間隔）
+
+```css
+.container {
+  gap: 1rem;        /* 行・列の間隔 */
+  gap: 1rem 2rem;   /* 行の間隔 / 列の間隔 */
+}
+```
+
+## アイテムのプロパティ
+
+### flex-grow / flex-shrink / flex-basis
+
+```css
+.item {
+  flex-grow: 1;   /* 余白があれば等分に伸びる */
+  flex-shrink: 0; /* 縮まない */
+  flex-basis: 200px; /* 基本サイズ */
+}
+
+/* 一括指定 */
+.item {
+  flex: 1;        /* flex-grow: 1, shrink: 1, basis: 0% */
+  flex: 0 0 200px; /* grow: 0, shrink: 0, basis: 200px */
+}
+```
+
+### align-self（個別の垂直揃え）
+
+```css
+.item-special {
+  align-self: flex-end; /* この要素だけ下揃え */
+}
+```
+
+## よくあるレイアウトパターン
+
+### 水平・垂直中央揃え
+
+```css
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+```
+
+### ナビゲーションバー
+
+```css
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 1rem;
+}
+```
+
+### カードグリッド
+
+```css
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.card {
+  flex: 1 1 300px; /* 最小300px、余白があれば伸びる */
+}
+```
+
+<Callout type="tip" title="Flexbox Froggyで練習">
+「Flexbox Froggy」というブラウザゲームでFlexboxのプロパティを楽しく練習できます。カエルをFlexboxで操作してゴールに運ぶゲームで���。
+</Callout>
+
+## まとめ
+
+- `display: flex`でフレックスコンテナを作る
+- `justify-content`で主軸方向、`align-items`で交差軸方向の揃えを設定
+- `flex-wrap: wrap`で折り返しを有効化
+- `gap`でアイテム間の間隔を設定
+- `flex: 1`で残りスペースを均等に分配できる

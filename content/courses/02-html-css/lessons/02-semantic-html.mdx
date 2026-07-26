@@ -1,0 +1,125 @@
+---
+title: セマンティックHTML
+description: 意味を持つHTMLタグを正しく使い、アクセシブルでSEOに強いページ���作る
+---
+
+## セマンティックとは
+
+**セマンティック（Semantic）**とは「意味を持つ」という意味です。セマンティックHTMLとは、コンテンツの意味や役割に合ったタグを選んで使うことです。
+
+`<div>`と`<p>`は見た目上は同じように使えますが、`<p>`は「段落」という意味を持ちます。意味のあるタグを使うことで：
+
+- **アクセシビリティ向上**: スクリーンリーダーが内容を正確に伝えられる
+- **SEO改善**: 検索エンジンがコンテンツ構造を理解しやすくな��
+- **コードの可読性向上**: 何のための要素か一目でわかる
+
+## HTML5のセマンティックタグ
+
+### ページ構造のタグ
+
+```html
+<header>
+  <nav>
+    <a href="/">ホーム</a>
+    <a href="/about">会社概要</a>
+  </nav>
+</header>
+
+<main>
+  <article>
+    <h1>記事タ��トル</h1>
+    <section>
+      <h2>セクション1</h2>
+      <p>内容...</p>
+    </section>
+  </article>
+
+  <aside>
+    <p>関連記事・サイドバー</p>
+  </aside>
+</main>
+
+<footer>
+  <p>© 2026 会社名</p>
+</footer>
+```
+
+### 各タグの役割
+
+| タグ | 役割 |
+|------|------|
+| `<header>` | ページやセクションのヘッダー（ロゴ・ナビ） |
+| `<nav>` | ナ���ゲーションリンクのグループ |
+| `<main>` | ページのメインコンテンツ（1ページに1つ） |
+| `<article>` | 独立して成立するコンテンツ（記事・投稿） |
+| `<section>` | テーマでまとまるコンテンツの区切り |
+| `<aside>` | メインコンテンツに関連する補��情報 |
+| `<footer>` | ページやセクションのフッター |
+
+## divとspanとの使い分け
+
+`<div>`と`<span>`は意味を持たないコンテナ要素です。CSSでレイアウトやスタイルを当てるためだけに使います。
+
+```html
+<!-- 悪い例：意味のある箇所にdivを使う -->
+<div class="article">
+  <div class="title">記事タイトル</div>
+  <div class="content">内容...</div>
+</div>
+
+<!-- 良い例：適切なセマンティックタグを使う -->
+<article>
+  <h1>記事タ��トル</h1>
+  <p>内容...</p>
+</article>
+```
+
+<Callout type="note" title="divを使う場面">
+スタイルのためのラッパーや、適切なセマンティックタグがない場合は`<div>`を使います。すべてを置き換える必要はなく、意味のある場所に意味のあるタグを使うのがポイ��トです。
+</Callout>
+
+## フォーム関連のセマンティック
+
+```html
+<form action="/submit" method="post">
+  <fieldset>
+    <legend>個人情報</legend>
+
+    <label for="name">名前</label>
+    <input type="text" id="name" name="name" required />
+
+    <label for="email">メールアドレス</label>
+    <input type="email" id="email" name="email" required />
+  </fieldset>
+
+  <button type="submit">���信</button>
+</form>
+```
+
+`<label>`と`<input>`を`for`と`id`で紐付けることで、ラベルをクリックしてもフォームにフォーカスが当たるようになります。
+
+## WAI-ARIAとアク���シビリティ
+
+セマンティックタグだけでは表現できないアクセシビリティ情報を補うために**ARIA（Accessible Rich Internet Applications）**属性を使います。
+
+```html
+<!-- ナビゲーションの役割を明示 -->
+<nav aria-label="メインナビゲーション">
+  ...
+</nav>
+
+<!-- 現在のページを示す -->
+<a href="/" aria-current="page">ホーム</a>
+
+<!-- 非表示のボタンの目的を説明 -->
+<button aria-label="メニューを開く">
+  <span class="hamburger-icon"></span>
+</button>
+```
+
+## まとめ
+
+- セマンティックタグは意味のある場所に使い、コード・アクセシビリティ・SEOを改善する
+- `<header>`, `<main>`, `<article>`, `<section>`, `<footer>`でページ構造を表現する
+- `<div>`,`<span>`はスタイル目的のコンテナとして使う
+- `<label>`とフォーム要素を紐付けてアクセシビリティを確保する

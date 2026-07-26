@@ -1,0 +1,191 @@
+---
+title: 演算子と制御構造
+description: JavaScriptの演算子・条件分岐・ループ構文を学ぶ
+---
+
+## 演算子
+
+### 算術演算子
+
+```javascript
+const a = 10, b = 3;
+
+a + b   // 13（加算）
+a - b   // 7（減算）
+a * b   // 30（乗算）
+a / b   // 3.333...（除算）
+a % b   // 1（剰余）
+a ** b  // 1000（べき乗）
+
+// インクリメント・デクリメント
+let n = 5;
+n++;  // n = 6
+n--;  // n = 5
+```
+
+### 比較演算子
+
+```javascript
+5 === 5    // true（厳密等価）
+5 !== "5"  // true（厳密不等価）
+5 > 3      // true
+5 >= 5     // true
+3 < 5      // true
+3 <= 3     // true
+```
+
+### 論理演算子
+
+```javascript
+true && false  // false（AND）
+true || false  // true（OR）
+!true          // false（NOT）
+
+// ショートサーキット評価
+null ?? "デフォルト"     // "デフォルト"（Nullish Coalescing）
+undefined ?? "default"  // "default"
+0 ?? "default"          // 0（nullとundefinedのみ）
+
+// オプショナルチェーン
+const user = null;
+user?.name  // undefined（エラーにならない）
+user?.address?.city  // undefined
+```
+
+### 代入演算子
+
+```javascript
+let x = 10;
+x += 5;   // x = 15
+x -= 3;   // x = 12
+x *= 2;   // x = 24
+x /= 4;   // x = 6
+x **= 2;  // x = 36
+x ??= 0;  // xがnull/undefinedなら0を代入
+```
+
+## 条件分岐
+
+### if / else if / else
+
+```javascript
+const score = 75;
+
+if (score >= 90) {
+  console.log("優秀");
+} else if (score >= 70) {
+  console.log("合格");
+} else if (score >= 50) {
+  console.log("再試験");
+} else {
+  console.log("不合格");
+}
+```
+
+### 三項演算子
+
+```javascript
+const age = 20;
+const status = age >= 18 ? "成人" : "未成年";
+// 条件 ? 真の値 : 偽の値
+```
+
+### switch文
+
+```javascript
+const day = "Monday";
+
+switch (day) {
+  case "Monday":
+  case "Tuesday":
+  case "Wednesday":
+  case "Thursday":
+  case "Friday":
+    console.log("平日");
+    break;
+  case "Saturday":
+  case "Sunday":
+    console.log("休日");
+    break;
+  default:
+    console.log("不明");
+}
+```
+
+<Callout type="warning" title="breakを忘れずに">
+`switch`文では`break`を書かないと次のcaseも実行されます（フォールスルー）。意図的でない場合は必ず`break`を書きましょう。
+</Callout>
+
+## ループ
+
+### for文
+
+```javascript
+for (let i = 0; i < 5; i++) {
+  console.log(i); // 0, 1, 2, 3, 4
+}
+```
+
+### while文
+
+```javascript
+let count = 0;
+while (count < 3) {
+  console.log(count);
+  count++;
+}
+```
+
+### for...of（配列のループ）
+
+```javascript
+const fruits = ["りんご", "バナナ", "みかん"];
+
+for (const fruit of fruits) {
+  console.log(fruit);
+}
+```
+
+### for...in（オブジェクトのループ）
+
+```javascript
+const person = { name: "田中", age: 25, city: "東京" };
+
+for (const key in person) {
+  console.log(`${key}: ${person[key]}`);
+}
+// name: 田中
+// age: 25
+// city: 東京
+```
+
+### ループ制御
+
+```javascript
+for (let i = 0; i < 10; i++) {
+  if (i === 3) continue; // 3をスキップ
+  if (i === 7) break;    // 7で終了
+  console.log(i); // 0, 1, 2, 4, 5, 6
+}
+```
+
+## 短絡評価とガード節
+
+```javascript
+// ガード節（早期リターン）で深いネストを避ける
+function processUser(user) {
+  if (!user) return;           // nullチェック
+  if (!user.isActive) return;  // 有効チェック
+
+  // メインロジック
+  console.log(user.name);
+}
+```
+
+## まとめ
+
+- 算術・比較・論理演算子を使いこなす
+- `===`で厳密な比較を行う
+- `??`（Nullish Coalescing）と`?.`（Optional Chaining）は現代的な必須構文
+- `for...of`が配列のループで最もシンプル
+- ガード節で早期リターンしてネストを浅くする

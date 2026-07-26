@@ -1,0 +1,155 @@
+---
+title: SQLの基礎
+description: SELECT・INSERT・UPDATE・DELETEの基本SQL文とWHERE・JOIN・GROUP BYを習得する
+---
+
+## SQLとは
+
+**SQL（Structured Query Language）**はRDBMSを操作するための言語です。データの取得・追加・更新・削除だけでなく、テーブルの作成・変更も行えます。
+
+## SELECT（データの取得）
+
+```sql
+-- 全カラムを取得
+SELECT * FROM users;
+
+-- 特定カラムを取得
+SELECT id, name, email FROM users;
+
+-- WHERE句で条件絞り込み
+SELECT * FROM users WHERE age >= 20;
+SELECT * FROM users WHERE name = '田中';
+SELECT * FROM users WHERE email LIKE '%@example.com';
+
+-- 複数条件
+SELECT * FROM users WHERE age >= 20 AND role = 'admin';
+SELECT * FROM users WHERE city = '東京' OR city = '大阪';
+
+-- NULL判定
+SELECT * FROM users WHERE deleted_at IS NULL;
+SELECT * FROM users WHERE deleted_at IS NOT NULL;
+
+-- ORDER BY（並び替え）
+SELECT * FROM posts ORDER BY created_at DESC;
+SELECT * FROM posts ORDER BY title ASC, created_at DESC;
+
+-- LIMIT / OFFSET（ページネーション）
+SELECT * FROM posts ORDER BY id DESC LIMIT 10;
+SELECT * FROM posts ORDER BY id DESC LIMIT 10 OFFSET 20; -- 3ページ目
+```
+
+## INSERT（データの追加）
+
+```sql
+-- 1件追加
+INSERT INTO users (name, email, age)
+VALUES ('田中太郎', 'tanaka@example.com', 25);
+
+-- 複数件追加
+INSERT INTO users (name, email)
+VALUES
+  ('鈴木花子', 'suzuki@example.com'),
+  ('佐藤一郎', 'sato@example.com');
+
+-- 追加した行のIDを返す
+INSERT INTO posts (user_id, title) VALUES (1, '初投稿')
+RETURNING id;
+```
+
+## UPDATE（データの更新）
+
+```sql
+-- WHERE必須！（忘れると全行が更新される）
+UPDATE users SET name = '田中二郎' WHERE id = 1;
+
+-- 複数カラムを更新
+UPDATE users
+SET
+  name = '鈴木次郎',
+  updated_at = CURRENT_TIMESTAMP
+WHERE id = 2;
+
+-- 数値の加算
+UPDATE products SET stock = stock - 1 WHERE id = 100;
+```
+
+## DELETE（データの削除）
+
+```sql
+-- WHERE必須！（忘れると全行が削除される）
+DELETE FROM users WHERE id = 1;
+
+-- 古いデータを削除
+DELETE FROM logs WHERE created_at < NOW() - INTERVAL '30 days';
+
+-- 論理削除（実際には削除せずフラグで管理）
+UPDATE users SET deleted_at = CURRENT_TIMESTAMP WHERE id = 1;
+```
+
+## JOIN（テーブルの結合）
+
+```sql
+-- INNER JOIN: 両方に存在するデータのみ
+SELECT
+  posts.id,
+  posts.title,
+  users.name AS author_name
+FROM posts
+INNER JOIN users ON posts.user_id = users.id;
+
+-- LEFT JOIN: 左のテーブルを全件含む（右はNULLの場合あり）
+SELECT
+  users.name,
+  COUNT(posts.id) AS post_count
+FROM users
+LEFT JOIN posts ON posts.user_id = users.id
+GROUP BY users.id, users.name;
+```
+
+## GROUP BY と集計関数
+
+```sql
+-- COUNT: 件数
+SELECT COUNT(*) FROM users;
+SELECT COUNT(*) FROM users WHERE role = 'admin';
+
+-- SUM・AVG・MAX・MIN
+SELECT
+  category,
+  COUNT(*) AS count,
+  AVG(price) AS avg_price,
+  MAX(price) AS max_price,
+  MIN(price) AS min_price
+FROM products
+GROUP BY category;
+
+-- HAVING: GROUP BY後の条件（WHEREはGROUP BY前）
+SELECT category, COUNT(*) AS count
+FROM products
+GROUP BY category
+HAVING COUNT(*) >= 5; -- 5件以上のカテゴリのみ
+```
+
+## サブクエリ
+
+```sql
+-- 平均価格より高い商品
+SELECT * FROM products
+WHERE price > (SELECT AVG(price) FROM products);
+
+-- 投稿がある（アクティブな）ユーザー
+SELECT * FROM users
+WHERE id IN (SELECT DISTINCT user_id FROM posts);
+```
+
+<Callout type="warning" title="WHERE句を忘れずに">
+UPDATE・DELETE文でWHERE句を忘れると**全行が更新・削除**されます。本番環境での操作前には必ず`SELECT`で対象を確認し、トランザクション内で実行することをおすすめします。
+</Callout>
+
+## まとめ
+
+- `SELECT...WHERE...ORDER BY...LIMIT`でデータを取得する
+- `INSERT`・`UPDATE`・`DELETE`でデータを追加・更新・削除する
+- `JOIN`で複数テーブルを結合して取得する
+- `GROUP BY`と集計関数で集計処理ができる
+- UPDATE・DELETEはWHERE句必須

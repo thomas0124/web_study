@@ -1,0 +1,129 @@
+---
+title: HTTPS/TLS
+description: TLSの仕組みと証明書・HTTPSの強制・セキュアなHTTPヘッダーの設定を学ぶ
+---
+
+## HTTPとHTTPSの違い
+
+**HTTP**はデータを平文で送受信します。通信経路上の誰でも内容を読めます。
+
+**HTTPS**はTLS（Transport Layer Security）で通信を暗号化します：
+- 盗聴できない（暗号化）
+- 改ざんを検出できる（整合性）
+- 相手が本物のサイトと確認できる（認証）
+
+## TLSハンドシェイク
+
+TLS接続確立の流れ（簡略版）：
+
+```
+クライアント                     サーバー
+    │                              │
+    │──── ClientHello ────────────>│ 使える暗号スイートを提示
+    │                              │
+    │<─── ServerHello + 証明書 ────│ 証明書とサーバー公開鍵を送信
+    │                              │
+    │  [証明書をCAで検証]          │
+    │                              │
+    │──── 暗号化されたマスターキー>│ セッション鍵を共有
+    │                              │
+    │<════ 暗号化された通信 ═══════│ TLS確立
+```
+
+## SSL/TLS証明書
+
+証明書はCA（認証局）が発行し、サーバーの正当性を証明します。
+
+```bash
+# Let's Encrypt（無料）で証明書取得
+certbot certonly --standalone -d example.com -d www.example.com
+
+# 自動更新
+certbot renew --dry-run
+
+# Nginxで設定
+ssl_certificate /etc/letsencrypt/live/example.com/fullchain.pem;
+ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;
+```
+
+## HTTPをHTTPSにリダイレクト
+
+```javascript
+// Expressでのリダイレクト
+app.use((req, res, next) => {
+  if (req.headers["x-forwarded-proto"] !== "https" &&
+      process.env.NODE_ENV === "production") {
+    return res.redirect(301, `https://${req.hostname}${req.url}`);
+  }
+  next();
+});
+```
+
+Nginxでのリダイレクト：
+
+```nginx
+server {
+  listen 80;
+  server_name example.com;
+  return 301 https://$host$request_uri;
+}
+```
+
+## セキュリティHTTPヘッダー
+
+```javascript
+import helmet from "helmet";
+
+// helmetでセキュリティヘッダーを一括設定
+app.use(helmet());
+
+// 個別に設定する場合
+app.use((req, res, next) => {
+  // HTTPSのみでサイトにアクセスさせる（1年間）
+  res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+
+  // クリックジャッキング防止
+  res.setHeader("X-Frame-Options", "DENY");
+
+  // MIMEタイプスニッフィング防止
+  res.setHeader("X-Content-Type-Options", "nosniff");
+
+  // Refererの送信を制限
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+
+  // 権限ポリシー（カメラ・マイクなどへのアクセスを制限）
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+
+  next();
+});
+```
+
+## TLSの設定
+
+```nginx
+# 現代的なTLS設定（Nginx）
+ssl_protocols TLSv1.2 TLSv1.3;    # 古いプロトコルを無効化
+ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:...;
+ssl_prefer_server_ciphers off;
+
+# セッションの再利用でパフォーマンス向上
+ssl_session_cache shared:SSL:10m;
+ssl_session_timeout 1d;
+ssl_session_tickets off;
+
+# OCSP Stapling（証明書失効確認を高速化）
+ssl_stapling on;
+ssl_stapling_verify on;
+```
+
+<Callout type="info" title="HTTPSだけでは十分でない">
+HTTPSはあくまで「通信経路」の保護です。アプリケーション層のXSS・SQLインジェクション・CSRF攻撃はHTTPSでは防げません。HTTPSは多層防御の1つです。
+</Callout>
+
+## まとめ
+
+- HTTPSはTLSで通信を暗号化・整合性保護・認証する
+- Let's Encryptで無料でTLS証明書を取得できる
+- 本番環境ではHTTPからHTTPSへのリダイレクトを必ず設定
+- `helmet`ミドルウェアでセキュリティヘッダーを一括設定
+- TLSv1.2以上のみ許可し古いプロトコルを無効化する

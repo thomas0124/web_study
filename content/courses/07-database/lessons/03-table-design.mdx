@@ -1,0 +1,152 @@
+---
+title: テーブル設計
+description: 正規化・命名規則・データ型選択など実務で使えるテーブル設計の原則を学ぶ
+---
+
+## 良いテーブル設計の重要性
+
+テーブル設計はアプリケーションの土台です。後から変更するのはコストが高いため、最初に時間をかけて設計することが重要です。
+
+## 正規化
+
+**正規化**はデータの重複を排除して整合性を保つための設計手法です。
+
+### 第1正規形（1NF）: 繰り返しグループを除去
+
+```sql
+-- 悪い例（非正規形）
+-- usersテーブルにphone1, phone2, phone3という繰り返し列がある
+id | name | phone1      | phone2      | phone3
+1  | 田中 | 090-0000-0001 | 080-0000-0002 | NULL
+
+-- 良い例（1NF）
+-- 繰り返しを別テーブルに分離
+-- users: id | name
+-- user_phones: id | user_id | phone_number
+```
+
+### 第2正規形（2NF）: 部分関数従属を除去
+
+複合主キーの場合、一部のキーだけに依存する列を分離します。
+
+### 第3正規形（3NF）: 推移関数従属を除去
+
+```sql
+-- 悪い例
+-- user_id → zip_code → prefecture（郵便番号が決まれば都道府県が決まる）
+orders: user_id | zip_code | prefecture | amount
+
+-- 良い例
+-- 都道府県は郵便番号テーブルに分離
+orders: user_id | zip_code | amount
+zip_codes: zip_code | prefecture
+```
+
+## 命名規則
+
+一貫した命名規則でコードが読みやすくなります：
+
+```sql
+-- テーブル名: 小文字・スネークケース・複数形
+users, posts, order_items, user_profiles
+
+-- カラム名: 小文字・スネークケース
+user_id, created_at, is_active, email_verified_at
+
+-- 主キー: id
+id SERIAL PRIMARY KEY
+
+-- 外部キー: {参照テーブルの単数形}_id
+user_id, post_id, category_id
+
+-- タイムスタンプ
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+deleted_at TIMESTAMP  -- 論理削除用
+
+-- 真偽値: is_/has_/can_ プレフィックス
+is_active, has_subscription, can_edit
+```
+
+## 適切なデータ型の選択
+
+```sql
+-- 整数
+SMALLINT       -- -32768 ~ 32767
+INTEGER        -- -2147483648 ~ 2147483647（一般的な用途）
+BIGINT         -- 超大きな数
+SERIAL         -- 自動連番（INTEGER + シーケンス）
+BIGSERIAL      -- BIGINT版自動連番
+
+-- 文字列
+VARCHAR(n)     -- 最大n文字（メール・名前など）
+TEXT           -- 長さ制限なし（記事本文など）
+CHAR(n)        -- 固定長（郵便番号など）
+
+-- 数値
+NUMERIC(10,2)  -- 正確な小数（金額: 12345678.90）
+REAL/FLOAT     -- 浮動小数点（科学計算など）
+
+-- 日時
+DATE           -- 日付のみ（2026-07-26）
+TIME           -- 時刻のみ（12:30:00）
+TIMESTAMP      -- 日時（タイムゾーンなし）
+TIMESTAMPTZ    -- 日時（タイムゾーンあり、推奨）
+
+-- その他
+BOOLEAN        -- true/false
+UUID           -- ユニークID（公開IDに適している）
+JSONB          -- JSON（PostgreSQL）
+```
+
+## 実際の設計例
+
+```sql
+-- ブログアプリのテーブル設計
+CREATE TABLE users (
+  id           BIGSERIAL PRIMARY KEY,
+  email        VARCHAR(255) UNIQUE NOT NULL,
+  name         VARCHAR(100) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  role         VARCHAR(20) NOT NULL DEFAULT 'user',
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  deleted_at   TIMESTAMPTZ  -- 論理削除
+);
+
+CREATE TABLE categories (
+  id    SERIAL PRIMARY KEY,
+  name  VARCHAR(100) UNIQUE NOT NULL,
+  slug  VARCHAR(100) UNIQUE NOT NULL
+);
+
+CREATE TABLE posts (
+  id           BIGSERIAL PRIMARY KEY,
+  user_id      BIGINT NOT NULL REFERENCES users(id),
+  category_id  INTEGER REFERENCES categories(id),
+  title        VARCHAR(255) NOT NULL,
+  slug         VARCHAR(255) UNIQUE NOT NULL,
+  content      TEXT NOT NULL,
+  status       VARCHAR(20) NOT NULL DEFAULT 'draft',
+  published_at TIMESTAMPTZ,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+<Callout type="tip" title="論理削除 vs 物理削除">
+データを実際に消す（物理削除）か、`deleted_at`フラグで非表示にする（論理削除）かを設計時に決めましょう。
+
+- **物理削除**: DBが軽くなる・取り消しが難しい
+- **論理削除**: 復元可能・監査ログになる・クエリが複雑になる
+
+重要なデータ（ユーザー・注文など）は論理削除が一般的です。
+</Callout>
+
+## まとめ
+
+- 正規化でデータの重複を排除して整合性を保つ
+- 一貫した命名規則でコードの可読性を上げる
+- 用途に合ったデータ型（金額はNUMERIC、タイムゾーンはTIMESTAMPTZ）
+- タイムスタンプ（created_at/updated_at）は必ずつける
+- 論理削除はdeleted_atカラムで実現する

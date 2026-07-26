@@ -1,0 +1,200 @@
+---
+title: イベントとフォーム
+description: Reactのイベントハンドリングと制御コンポーネントを使ったフォーム管理を学ぶ
+---
+
+## Reactのイベントハンドリング
+
+Reactのイベントはネイティブのイベントを**合成イベント（SyntheticEvent）**でラップしています。クロスブラウザ対応が自動的に行われます。
+
+```jsx
+function Button() {
+  const handleClick = (e) => {
+    e.preventDefault(); // デフォルト動作をキャンセル
+    console.log("クリック！", e.type); // "click"
+  };
+
+  return <button onClick={handleClick}>クリック</button>;
+}
+```
+
+HTMLとの違い：
+
+| HTML | React |
+|------|-------|
+| `onclick="handleClick()"` | `onClick={handleClick}` |
+| 小文字 | キャメルケース |
+| 文字列 | 関数参照 |
+
+## よく使うイベント
+
+```jsx
+function EventDemo() {
+  return (
+    <div
+      onClick={() => console.log("クリック")}
+      onDoubleClick={() => console.log("ダブルクリック")}
+      onMouseEnter={() => console.log("マウス侵入")}
+      onMouseLeave={() => console.log("マウス退出")}
+      onKeyDown={(e) => console.log("キー:", e.key)}
+    >
+      <input
+        onChange={(e) => console.log(e.target.value)}
+        onFocus={() => console.log("フォーカス")}
+        onBlur={() => console.log("フォーカス離れ")}
+      />
+      <form onSubmit={(e) => { e.preventDefault(); }}>
+        <button type="submit">送信</button>
+      </form>
+    </div>
+  );
+}
+```
+
+## 制御コンポーネント（Controlled Component）
+
+フォームの値をReactのstateで管理するパターンです。
+
+```jsx
+import { useState } from "react";
+
+function LoginForm() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    if (!email || !password) {
+      setError("メールアドレスとパスワードを入力してください");
+      return;
+    }
+
+    setError("");
+    // API呼び出しなど
+    console.log({ email, password });
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      {error && <p className="error">{error}</p>}
+
+      <div>
+        <label htmlFor="email">メールアドレス</label>
+        <input
+          id="email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+      </div>
+
+      <div>
+        <label htmlFor="password">パスワード</label>
+        <input
+          id="password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+      </div>
+
+      <button type="submit">ログイン</button>
+    </form>
+  );
+}
+```
+
+## 複数のフィールドをまとめて管理
+
+```jsx
+function ProfileForm() {
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    bio: "",
+    role: "user",
+  });
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setForm(prev => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  return (
+    <form>
+      <input name="name" value={form.name} onChange={handleChange} />
+      <input name="email" value={form.email} onChange={handleChange} />
+      <textarea name="bio" value={form.bio} onChange={handleChange} />
+      <select name="role" value={form.role} onChange={handleChange}>
+        <option value="user">一般</option>
+        <option value="admin">管理者</option>
+      </select>
+    </form>
+  );
+}
+```
+
+## 非制御コンポーネントとuseRef
+
+フォームの値をDOMから直接取得する方法もあります：
+
+```jsx
+import { useRef } from "react";
+
+function SearchForm() {
+  const inputRef = useRef(null);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log("検索:", inputRef.current.value);
+    inputRef.current.value = ""; // フォームをリセット
+    inputRef.current.focus();
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input ref={inputRef} type="search" placeholder="検索..." />
+      <button type="submit">検索</button>
+    </form>
+  );
+}
+```
+
+<Callout type="tip" title="制御 vs 非制御の選び方">
+- **制御コンポーネント**: リアルタイムバリデーション・入力に応じたUI変化・フォームの初期値設定が必要な場合
+- **非制御コンポーネント**: シンプルなフォーム・送信時にまとめて取得でよい場合・ファイル入力
+
+ほとんどの場合は制御コンポーネントを推奨します。
+</Callout>
+
+## イベントの伝播（バブリング）
+
+```jsx
+function Parent() {
+  return (
+    <div onClick={() => console.log("親がクリックされた")}>
+      <button
+        onClick={(e) => {
+          e.stopPropagation(); // 親への伝播を止める
+          console.log("子がクリックされた");
+        }}
+      >
+        クリック
+      </button>
+    </div>
+  );
+}
+```
+
+## まとめ
+
+- Reactのイベントはキャメルケース（onClick、onChangeなど）
+- 制御コンポーネントでフォームのstateを管理するのが基本
+- `name`属性と1つのhandleChangeで複数フィールドを効率的に管理
+- `useRef`で非制御コンポーネントのDOMにアクセスできる
+- `e.stopPropagation()`でイベントの伝播を止められる

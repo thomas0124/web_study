@@ -1,0 +1,152 @@
+---
+title: トランザクション
+description: トランザクションでデータの整合性を保つ方法とデッドロックの対策を学ぶ
+---
+
+## トランザクションとは
+
+**トランザクション**は複数のSQL操作をひとまとまりとして扱う仕組みです。全て成功するか（コミット）、全て取り消すか（ロールバック）の二択です。
+
+## なぜトランザクションが必要か
+
+銀行振込を例に考えます：
+
+```sql
+-- Aさんの残高を1万円減らす
+UPDATE accounts SET balance = balance - 10000 WHERE id = 1;
+
+-- Bさんの残高を1万円増やす（この処理の前にサーバーがクラッシュしたら？）
+UPDATE accounts SET balance = balance + 10000 WHERE id = 2;
+```
+
+もし途中でエラーが起きると、Aさんの残高だけ減り、Bさんには増えないという不整合が発生します。
+
+## トランザクションの基本
+
+```sql
+-- トランザクション開始
+BEGIN;
+
+UPDATE accounts SET balance = balance - 10000 WHERE id = 1;
+UPDATE accounts SET balance = balance + 10000 WHERE id = 2;
+
+-- 問題なければコミット（確定）
+COMMIT;
+
+-- エラーが発生したらロールバック（取り消し）
+ROLLBACK;
+```
+
+## Node.jsでのトランザクション
+
+```javascript
+// PostgreSQL（pgパッケージ）でのトランザクション
+async function transfer(fromId, toId, amount) {
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const from = await client.query(
+      "SELECT balance FROM accounts WHERE id = $1 FOR UPDATE",
+      [fromId]
+    );
+
+    if (from.rows[0].balance < amount) {
+      throw new Error("残高不足");
+    }
+
+    await client.query(
+      "UPDATE accounts SET balance = balance - $1 WHERE id = $2",
+      [amount, fromId]
+    );
+
+    await client.query(
+      "UPDATE accounts SET balance = balance + $1 WHERE id = $2",
+      [amount, toId]
+    );
+
+    await client.query("COMMIT");
+    console.log("振込完了");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+```
+
+## 分離レベル（Isolation Level）
+
+トランザクションの分離レベルで、並行処理時のデータの見え方が変わります。
+
+| 分離レベル | ダーティリード | ファジーリード | ファントムリード |
+|---------|------------|------------|-------------|
+| READ UNCOMMITTED | 発生 | 発生 | 発生 |
+| READ COMMITTED | なし | 発生 | 発生 |
+| REPEATABLE READ | なし | なし | 発生 |
+| SERIALIZABLE | なし | なし | なし |
+
+ほとんどのDBのデフォルトは**READ COMMITTED**です。
+
+```sql
+-- 分離レベルを設定
+BEGIN ISOLATION LEVEL REPEATABLE READ;
+```
+
+## ロック
+
+```sql
+-- 行ロック（SELECT...FOR UPDATE）
+-- 他のトランザクションが同じ行を更新できなくなる
+SELECT * FROM inventory WHERE product_id = 1 FOR UPDATE;
+
+-- ノーウェイトロック
+SELECT * FROM inventory WHERE product_id = 1 FOR UPDATE NOWAIT;
+-- → ロックを取得できなければエラーをすぐ返す
+```
+
+## デッドロック
+
+```
+トランザクションA: 行1をロック → 行2をロック待ち
+トランザクションB: 行2をロック → 行1をロック待ち
+→ お互いが待ち合ってしまう（デッドロック）
+```
+
+デッドロックの対策：
+
+```javascript
+// 常に同じ順序でリソースにアクセスする
+// 悪い例（Aはuser→product、Bはproduct→userの順でロック）
+// 良い例（常にuser→productの順でロック）
+
+// リトライ処理でデッドロックを吸収
+async function withRetry(fn, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (err.code === "40P01" && i < maxRetries - 1) {
+        // PostgreSQLのデッドロックエラーコード
+        await new Promise(r => setTimeout(r, 100 * (i + 1)));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+```
+
+<Callout type="tip" title="トランザクションは短く保つ">
+トランザクションが長時間続くと他のトランザクションがブロックされてパフォーマンスが低下します。DB操作のみをトランザクション内に含め、ネットワーク通信や重い計算処理はトランザクション外で行いましょう。
+</Callout>
+
+## まとめ
+
+- トランザクションで複数のSQL操作を原子的に扱える
+- エラー時はROLLBACK、成功時はCOMMIT
+- SELECT...FOR UPDATEで行ロックを取得できる
+- デッドロック対策はリソースへの一定順アクセスとリトライ
+- トランザクションは短く保つ

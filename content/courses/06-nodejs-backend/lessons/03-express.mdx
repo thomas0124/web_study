@@ -1,0 +1,160 @@
+---
+title: Express.js
+description: Node.jsのWebフレームワークExpressを使ってHTTPサーバーとルーティングを実装する
+---
+
+## Expressとは
+
+**Express**はNode.jsで最も広く使われるWebフレームワークです。最小限のAPIで、HTTPサーバー・ルーティング・ミドルウェアを簡単に実装できます。
+
+## 基本的なサーバー
+
+```javascript
+import express from "express";
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// JSONボディのパース
+app.use(express.json());
+
+// ルーティング
+app.get("/", (req, res) => {
+  res.json({ message: "Hello, Express!" });
+});
+
+// サーバー起動
+app.listen(PORT, () => {
+  console.log(`サーバー起動: http://localhost:${PORT}`);
+});
+```
+
+## ルーティング
+
+```javascript
+// GETリクエスト
+app.get("/users", (req, res) => {
+  res.json([{ id: 1, name: "田中" }]);
+});
+
+// URLパラメータ
+app.get("/users/:id", (req, res) => {
+  const { id } = req.params;
+  res.json({ id: Number(id), name: "田中" });
+});
+
+// クエリパラメータ (?page=1&limit=10)
+app.get("/posts", (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
+  res.json({ page: Number(page), limit: Number(limit) });
+});
+
+// POSTリクエスト（ボディを受け取る）
+app.post("/users", (req, res) => {
+  const { name, email } = req.body;
+  const newUser = { id: Date.now(), name, email };
+  res.status(201).json(newUser);
+});
+
+// PATCHリクエスト（部分更新）
+app.patch("/users/:id", (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+  // DBを更新する処理...
+  res.json({ id, ...updates });
+});
+
+// DELETEリクエスト
+app.delete("/users/:id", (req, res) => {
+  const { id } = req.params;
+  // DBから削除...
+  res.status(204).send(); // No Content
+});
+```
+
+## Routerで分割管理
+
+大きなアプリではルーティングをファイルに分けます：
+
+```javascript
+// routes/users.js
+import { Router } from "express";
+
+const router = Router();
+
+router.get("/", async (req, res) => {
+  // ユーザー一覧取得
+});
+
+router.get("/:id", async (req, res) => {
+  // ユーザー詳細取得
+});
+
+router.post("/", async (req, res) => {
+  // ユーザー作成
+});
+
+export default router;
+```
+
+```javascript
+// app.js
+import usersRouter from "./routes/users.js";
+import postsRouter from "./routes/posts.js";
+
+app.use("/users", usersRouter);  // /users/*
+app.use("/posts", postsRouter);  // /posts/*
+```
+
+## リクエストとレスポンス
+
+```javascript
+app.get("/example", (req, res) => {
+  // リクエスト情報
+  req.method;     // "GET"
+  req.url;        // "/example"
+  req.path;       // "/example"
+  req.params;     // URLパラメータ
+  req.query;      // クエリパラメータ
+  req.body;       // リクエストボディ
+  req.headers;    // リクエストヘッダー
+  req.ip;         // クライアントIPアドレス
+
+  // レスポンス
+  res.status(200);                    // ステータスコード
+  res.json({ data: "JSON" });         // JSON送信
+  res.send("テキスト");               // テキスト送信
+  res.sendFile("/path/to/file.html"); // ファイル送信
+  res.redirect("/new-url");           // リダイレクト
+  res.set("X-Custom-Header", "value"); // ヘッダー設定
+});
+```
+
+<Callout type="tip" title="エラーハンドリングミドルウェア">
+Expressでは引数が4つ（err, req, res, next）のミドルウェアをエラーハンドラとして認識します。すべてのルートの後に登録します：
+
+```javascript
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(err.status || 500).json({
+    error: err.message || "サーバーエラーが発生しました",
+  });
+});
+```
+</Callout>
+
+## 404ハンドリング
+
+```javascript
+// すべてのルートの後に記述
+app.use((req, res) => {
+  res.status(404).json({ error: "Not Found" });
+});
+```
+
+## まとめ
+
+- Expressは`app.get/post/put/patch/delete`でルーティングを定義
+- URLパラメータは`req.params`、クエリは`req.query`、ボディは`req.body`
+- `Router`でルーティングをファイル分割できる
+- エラーハンドラは引数4つの特別なミドルウェア

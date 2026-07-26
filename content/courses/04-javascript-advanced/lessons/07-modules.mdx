@@ -1,0 +1,181 @@
+---
+title: ESモジュール
+description: ES Modulesのimport/export構文を使ってコードをモジュール化する方法を学ぶ
+---
+
+## モジュールとは
+
+**モジュール**はコードを小さなファイルに分割して管理する仕組みです。モジュール化することで：
+
+- コードの再利用性が上がる
+- 名前空間の汚染を防ぐ
+- 依存関係が明確になる
+- テストがしやすくなる
+
+## ESモジュールの基本
+
+### エクスポート
+
+```javascript
+// utils.js
+
+// 名前付きエクスポート
+export const PI = 3.14159;
+
+export function add(a, b) {
+  return a + b;
+}
+
+export class Calculator {
+  multiply(a, b) { return a * b; }
+}
+
+// まとめてエクスポート
+const subtract = (a, b) => a - b;
+const divide = (a, b) => a / b;
+export { subtract, divide };
+
+// 別名でエクスポート
+export { subtract as minus };
+```
+
+```javascript
+// userService.js
+
+// デフォルトエクスポート（1ファイルに1つ）
+export default class UserService {
+  async getUser(id) {
+    const res = await fetch(`/api/users/${id}`);
+    return res.json();
+  }
+}
+```
+
+### インポート
+
+```javascript
+// main.js
+
+// 名前付きインポート
+import { add, PI } from "./utils.js";
+import { subtract as minus } from "./utils.js"; // 別名で受け取る
+
+// すべてを名前空間オブジェクトとしてインポート
+import * as utils from "./utils.js";
+utils.add(1, 2);
+utils.PI;
+
+// デフォルトインポート（名前は自由に付けられる）
+import UserService from "./userService.js";
+
+// デフォルトと名前付きの組み合わせ
+import UserService, { API_URL } from "./userService.js";
+```
+
+## モジュールの特徴
+
+### スコープの分離
+
+モジュールは独自のスコープを持ちます。`export`しない限り外部から見えません。
+
+```javascript
+// counter.js
+let count = 0; // モジュール内のプライベート変数
+
+export function increment() {
+  count++;
+}
+export function getCount() {
+  return count;
+}
+
+// count は外部から直接アクセスできない
+```
+
+### シングルトン性
+
+モジュールは1度だけロードされ、複数の場所でインポートしても同じインスタンスが共有されます。
+
+```javascript
+// store.js
+export const state = { count: 0 };
+
+// a.js
+import { state } from "./store.js";
+state.count++; // 1
+
+// b.js
+import { state } from "./store.js";
+console.log(state.count); // 1（同じオブジェクト）
+```
+
+## 動的インポート
+
+遅延ロード（必要になったときに読み込む）が可能です：
+
+```javascript
+// 条件によって読み込む
+async function loadEditor() {
+  if (!document.querySelector("#editor")) return;
+
+  const { default: Editor } = await import("./editor.js");
+  new Editor("#editor").init();
+}
+
+// ルーティングに応じて読み込む（コード分割）
+async function loadPage(route) {
+  const module = await import(`./pages/${route}.js`);
+  module.render();
+}
+```
+
+## re-export（再エクスポート）
+
+まとめて公開するindex.jsのパターン：
+
+```javascript
+// components/index.js
+export { Button } from "./Button.js";
+export { Input } from "./Input.js";
+export { Modal } from "./Modal.js";
+export { default as Card } from "./Card.js";
+
+// 使う側
+import { Button, Card } from "./components/index.js";
+// または
+import { Button, Card } from "./components"; // index.jsは省略可
+```
+
+<Callout type="tip" title="名前付きエクスポートを優先する">
+デフォルトエクスポートより名前付きエクスポートを優先することが推奨されます。
+
+理由:
+- インポート時の名前が統一される（リファクタリング時に追いやすい）
+- エディタの自動インポートが正確に機能する
+- ツール（バンドラー・型チェッカー）との親和性が高い
+</Callout>
+
+## CommonJS（Node.jsの旧方式）
+
+Node.jsの古いモジュールシステムも知っておきましょう：
+
+```javascript
+// CommonJS (require/module.exports)
+const path = require("path");
+const utils = require("./utils");
+
+module.exports = {
+  greet: (name) => `Hello, ${name}`,
+};
+module.exports.PI = 3.14;
+```
+
+現代のNode.jsはESModulesもサポートしていますが、既存のコードやライブラリでCommonJSをよく見かけます。
+
+## まとめ
+
+- `export`で外部に公開、`import`で読み込む
+- 名前付きエクスポートとデフォルトエクスポートの2種類がある
+- モジュールは独自のスコープを持ち、1度だけロードされる
+- 動的インポートで遅延ロード・コード分割ができる
+- 名前付きエクスポートを優先することを推奨

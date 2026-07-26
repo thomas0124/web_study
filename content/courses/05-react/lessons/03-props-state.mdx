@@ -1,0 +1,182 @@
+---
+title: Props と State
+description: コンポーネント間のデータ受け渡し（Props）と内部状態（State）の違いと使い方を学ぶ
+---
+
+## PropsとStateの違い
+
+| | Props | State |
+|-|-------|-------|
+| 誰が管理 | 親コンポーネント | 自分自身 |
+| 変更できるか | 読み取り専用 | setterで変更可能 |
+| 変更時の再レンダリング | 親が変更したら起きる | setterを呼んだら起きる |
+| 用途 | データを渡す | 変化するデータを管理 |
+
+## Props（プロパティ）
+
+親コンポーネントから子コンポーネントへデータを渡す仕組みです。
+
+```jsx
+// 子コンポーネント
+function Button({ label, onClick, variant = "primary", disabled = false }) {
+  return (
+    <button
+      className={`btn btn-${variant}`}
+      onClick={onClick}
+      disabled={disabled}
+    >
+      {label}
+    </button>
+  );
+}
+
+// 親コンポーネント
+function App() {
+  const handleClick = () => alert("クリック！");
+
+  return (
+    <div>
+      <Button label="送信" onClick={handleClick} />
+      <Button label="削除" onClick={handleClick} variant="danger" />
+      <Button label="無効" onClick={handleClick} disabled />
+    </div>
+  );
+}
+```
+
+### childrenプロパティ
+
+```jsx
+function Card({ title, children }) {
+  return (
+    <div className="card">
+      <h2>{title}</h2>
+      <div className="card-body">{children}</div>
+    </div>
+  );
+}
+
+// 使い方
+<Card title="ユーザー情報">
+  <p>名前: 田中太郎</p>
+  <p>メール: tanaka@example.com</p>
+</Card>
+```
+
+## State（状態）
+
+コンポーネント内で変化するデータを管理します。`useState`フックを使います。
+
+```jsx
+import { useState } from "react";
+
+function Counter() {
+  const [count, setCount] = useState(0); // [現在値, setter]
+
+  return (
+    <div>
+      <p>カウント: {count}</p>
+      <button onClick={() => setCount(count + 1)}>+1</button>
+      <button onClick={() => setCount(count - 1)}>-1</button>
+      <button onClick={() => setCount(0)}>リセット</button>
+    </div>
+  );
+}
+```
+
+### stateの更新は非同期
+
+```jsx
+function App() {
+  const [count, setCount] = useState(0);
+
+  const handleClick = () => {
+    // 悪い例: 複数回setしても1回しか更新されない
+    setCount(count + 1);
+    setCount(count + 1); // まだcountは0なので効果なし
+
+    // 良い例: 前の値を受け取るアップデータ関数を使う
+    setCount(prev => prev + 1);
+    setCount(prev => prev + 1); // 正しく2増加する
+  };
+}
+```
+
+## オブジェクトと配列のstate
+
+stateを更新するときは**新しいオブジェクト/配列を作る**必要があります。
+
+```jsx
+// オブジェクトのstate
+const [user, setUser] = useState({ name: "田中", age: 25 });
+
+// 一部を更新（スプレッド構文でコピーしてから変更）
+setUser({ ...user, age: 26 });
+
+// 配列のstate
+const [todos, setTodos] = useState([]);
+
+// 追加
+setTodos([...todos, { id: Date.now(), text: "新しいタスク", done: false }]);
+
+// 削除
+setTodos(todos.filter(todo => todo.id !== targetId));
+
+// 更新
+setTodos(todos.map(todo =>
+  todo.id === targetId ? { ...todo, done: true } : todo
+));
+```
+
+<Callout type="warning" title="stateを直接変更しない">
+以下のような直接変更はReactが変更を検知できません：
+
+```javascript
+// 悪い例（直接変更）
+user.age = 26;      // Reactが変更を検知できない
+todos.push(newTodo); // 同じ参照なので変更を検知できない
+
+// 良い例（新しいオブジェクト/配列を作る）
+setUser({ ...user, age: 26 });
+setTodos([...todos, newTodo]);
+```
+</Callout>
+
+## 状態の吊り上げ（State Lifting）
+
+複数のコンポーネントが同じ状態を共有する必要がある場合、状態を共通の親コンポーネントに移動します。
+
+```jsx
+// 兄弟コンポーネントで状態を共有
+function Parent() {
+  const [inputValue, setInputValue] = useState("");
+
+  return (
+    <>
+      <Input value={inputValue} onChange={setInputValue} />
+      <Preview value={inputValue} />
+    </>
+  );
+}
+
+function Input({ value, onChange }) {
+  return (
+    <input
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    />
+  );
+}
+
+function Preview({ value }) {
+  return <p>プレビュー: {value}</p>;
+}
+```
+
+## まとめ
+
+- Propsは親から子へデータを渡す（読み取り専用）
+- Stateはコンポーネント内で変化するデータ（useStateで管理）
+- stateの更新は非同期で、アップデータ関数を使うと安全
+- オブジェクト・配列のstateは直接変更せず新しいものを作る
+- 複数コンポーネントで共有が必要なstateは親に吊り上げる

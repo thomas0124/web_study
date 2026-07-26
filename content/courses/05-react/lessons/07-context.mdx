@@ -1,0 +1,185 @@
+---
+title: コンテキスト
+description: React ContextでPropsのバケツリレーを解消し、グローバルな状態を管理する
+---
+
+## Propsのバケツリレー問題
+
+深いコンポーネントツリーで、多くの中間コンポーネントを通じてデータを渡す必要がある状況を**Props Drilling（プロップスのバケツリレー）**といいます。
+
+```
+App（user stateを持つ）
+  └── Layout
+      └── Sidebar
+          └── UserMenu
+              └── UserAvatar（userが必要）
+```
+
+Layoutを経由してSidebarへ、SidebarからUserMenuへ...と`user`を渡すのは非効率です。
+
+## Contextの使い方
+
+**React Context**を使うと、Propsを経由せず任意の深さのコンポーネントへデータを渡せます。
+
+### 1. Contextの作成
+
+```jsx
+// context/AuthContext.jsx
+import { createContext, useContext, useState } from "react";
+
+const AuthContext = createContext(null);
+
+// Providerコンポーネント
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+
+  const login = async (email, password) => {
+    const res = await fetch("/api/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+      headers: { "Content-Type": "application/json" },
+    });
+    const userData = await res.json();
+    setUser(userData);
+  };
+
+  const logout = () => setUser(null);
+
+  return (
+    <AuthContext.Provider value={{ user, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+// カスタムフックで使いやすく
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("AuthProvider外でuseAuthは使えません");
+  return context;
+}
+```
+
+### 2. アプリをProviderで囲む
+
+```jsx
+// App.jsx
+import { AuthProvider } from "./context/AuthContext";
+
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <Layout />
+      </Router>
+    </AuthProvider>
+  );
+}
+```
+
+### 3. どこでも使える
+
+```jsx
+// UserAvatar.jsx（深い階層でも使える）
+import { useAuth } from "../context/AuthContext";
+
+function UserAvatar() {
+  const { user, logout } = useAuth();
+
+  if (!user) return null;
+  return (
+    <div>
+      <img src={user.avatar} alt={user.name} />
+      <button onClick={logout}>ログアウト</button>
+    </div>
+  );
+}
+```
+
+## テーマ切り替えのContext例
+
+```jsx
+// context/ThemeContext.jsx
+const ThemeContext = createContext("light");
+
+export function ThemeProvider({ children }) {
+  const [theme, setTheme] = useState("light");
+
+  return (
+    <ThemeContext.Provider value={{ theme, setTheme }}>
+      <div data-theme={theme}>
+        {children}
+      </div>
+    </ThemeContext.Provider>
+  );
+}
+
+export const useTheme = () => useContext(ThemeContext);
+
+// 使い方
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme();
+  return (
+    <button onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
+      {theme === "light" ? "🌙 ダーク" : "☀️ ライト"}
+    </button>
+  );
+}
+```
+
+## Contextの注意点
+
+<Callout type="warning" title="Context更新時は全子孫が再レンダリング">
+ContextのProviderのvalueが変わると、そのContextを使っているすべてのコンポーネントが再レンダリングされます。パフォーマンスが重要な場合は以下を検討しましょう：
+
+- 変化が激しいデータと静的なデータを別のContextに分ける
+- `useMemo`でvalueオブジェクトをメモ化する
+- ZustandやJotaiなどの専用状態管理ライブラリを検討する
+</Callout>
+
+## Contextを使うべき場面
+
+適切な用途：
+- 認証情報（ユーザー情報・ログイン状態）
+- テーマ（ライト/ダーク）
+- 言語・ロケール設定
+- モーダルやトーストの表示制御
+
+過剰な使用を避ける場面：
+- 頻繁に更新されるデータ（フォームの入力値など）
+- コンポーネントが少数の場合（Propsで十分）
+
+## useReducerとContextの組み合わせ
+
+複雑な状態管理には`useReducer`と組み合わせると効果的です：
+
+```jsx
+const reducer = (state, action) => {
+  switch (action.type) {
+    case "ADD_ITEM":
+      return { ...state, items: [...state.items, action.payload] };
+    case "REMOVE_ITEM":
+      return { ...state, items: state.items.filter(i => i.id !== action.payload) };
+    default:
+      return state;
+  }
+};
+
+function CartProvider({ children }) {
+  const [state, dispatch] = useReducer(reducer, { items: [] });
+
+  return (
+    <CartContext.Provider value={{ state, dispatch }}>
+      {children}
+    </CartContext.Provider>
+  );
+}
+```
+
+## まとめ
+
+- Contextでコンポーネントツリーのどこからでもデータにアクセスできる
+- `createContext` → `Provider` → `useContext`の3ステップ
+- カスタムフック（`useAuth`など）でContextをラップして使いやすくする
+- 頻繁に更新されるデータには向かない
+- 認証・テーマ・言語設定などグローバルな設定に最適

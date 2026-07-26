@@ -1,0 +1,140 @@
+---
+title: GitHubフロー
+description: GitHubを使ったブランチ戦略・プルリクエスト・コードレビューの実践的なワークフローを学ぶ
+---
+
+## GitHubフローとは
+
+**GitHub Flow**はGitHubが推奨するシンプルなブランチ戦略です：
+
+1. `main`ブランチは常にデプロイ可能な状態を保つ
+2. 作業はfeatureブランチで行う
+3. Pull Requestでレビューしてmainにマージ
+
+```
+main ─────○──────────────○──────── (常にデプロイ可能)
+           │             ↑
+           └──○──○──○──○  feat/login-page（PR経由でマージ）
+```
+
+## ブランチ命名
+
+```bash
+# 機能追加
+git switch -c feat/user-profile
+git switch -c feat/payment-integration
+
+# バグ修正
+git switch -c fix/login-validation-error
+git switch -c fix/cors-header-missing
+
+# ドキュメント
+git switch -c docs/update-api-reference
+
+# リファクタリング
+git switch -c refactor/extract-auth-middleware
+```
+
+## プルリクエスト（PR）
+
+### PR作成の流れ
+
+```bash
+# 1. featureブランチを作成
+git switch -c feat/add-search
+
+# 2. 作業・コミット
+git add src/components/SearchBar.tsx
+git commit -m 'feat: add SearchBar component'
+git add src/api/search.ts
+git commit -m 'feat: add search API endpoint'
+
+# 3. GitHubにプッシュ
+git push -u origin feat/add-search
+
+# 4. gh CLIでPRを作成
+gh pr create --title "feat: Add search functionality" \
+  --body "## 変更内容\n- SearchBarコンポーネントを追加\n- /api/searchエンドポイントを追加"
+```
+
+### 良いPR説明の書き方
+
+```markdown
+## 概要
+ユーザーが投稿を全文検索できる機能を追加しました。
+
+## 変更内容
+- `SearchBar`コンポーネントを追加
+- `/api/search?q=キーワード`エンドポイントを追加
+- PostgreSQLの全文検索インデックスを追加
+
+## テスト方法
+1. `pnpm dev`でサーバーを起動
+2. ヘッダーの検索ボックスにキーワードを入力
+3. 検索結果が表示されることを確認
+
+## スクリーンショット
+![検索結果](screenshot.png)
+```
+
+## コードレビュー
+
+### レビュアーの視点
+
+```
+確認すべきポイント：
+□ ロジックが正しいか
+□ セキュリティの問題がないか（XSS・SQLi等）
+□ エラーハンドリングが適切か
+□ テストが十分か
+□ 命名が分かりやすいか
+□ パフォーマンスの問題がないか
+```
+
+### レビューコメントの書き方
+
+```markdown
+# 建設的なコメントの例
+
+## 必須の修正
+このSQLクエリはSQLインジェクションの脆弱性があります。
+プリペアドステートメントを使ってください。
+
+## 提案（任意）
+この処理はユーザーが増えると遅くなる可能性があります。
+インデックスを検討してみてください。
+
+## 質問
+この条件が`>`ではなく`>=`になっている意図を教えてもらえますか？
+
+## 良いコード！
+このエラーハンドリングのパターン、とても分かりやすいです。
+```
+
+## マージ戦略
+
+```bash
+# Squash and Merge（複数のコミットを1つにまとめる）
+# → クリーンな履歴、細かいWIPコミットを隠せる
+gh pr merge --squash
+
+# Merge Commit（マージコミットを作成）
+# → featureブランチの履歴が残る
+gh pr merge --merge
+
+# Rebase and Merge（直線状の履歴）
+# → クリーンな履歴、各コミットが残る
+gh pr merge --rebase
+```
+
+<Callout type="info" title="draft PRの活用">
+作業中でもdraft PRを早めに作成することで、方向性を早期にチームで確認できます。`gh pr create --draft`で作成できます。準備ができたら"Ready for review"に変更してレビューを依頼します。
+</Callout>
+
+## まとめ
+
+- GitHub Flowはmainブランチをデプロイブロックしないシンプルな戦略
+- featureブランチで作業してPRでmainにマージ
+- PR説明には変更内容・テスト方法・スクリーンショットを含める
+- レビューコメントは建設的に、必須/提案/質問を区別する
+- Squash mergeでmainブランチの履歴をクリーンに保つ

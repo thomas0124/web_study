@@ -1,0 +1,8 @@
+{
+  "slug": "javascript-advanced",
+  "title": "JavaScript応用",
+  "description": "クロージャ・非同期処理・Promise・async/awaitなどJavaScriptの深い概念を理解し、実務で通用するコードが書けるようになる。",
+  "level": "中級",
+  "order": 4,
+  "lessonCount": 7
+}

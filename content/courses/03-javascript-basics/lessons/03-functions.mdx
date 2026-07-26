@@ -1,0 +1,170 @@
+---
+title: 関数
+description: JavaScriptの関数定義・アロー関数・スコープ・高階関数を理解する
+---
+
+## 関数とは
+
+関数は処理をまとめて名前を付けたものです。同じ処理を何度も書く代わりに、関数を呼び出すだけで実行できます。
+
+## 関数の定義方法
+
+### 関数宣言
+
+```javascript
+function greet(name) {
+  return `こんにちは、${name}さん！`;
+}
+
+console.log(greet("田中")); // "こんにちは、田中さん！"
+```
+
+### 関数式
+
+```javascript
+const greet = function(name) {
+  return `こんにちは、${name}さん！`;
+};
+```
+
+### アロー関数（推奨）
+
+```javascript
+const greet = (name) => {
+  return `こんにちは、${name}さん！`;
+};
+
+// 引数が1つの場合はカッコ省略可
+const double = n => n * 2;
+
+// 処理が1行の場合はreturnとブレース省略可
+const add = (a, b) => a + b;
+
+// オブジェクトを返す場合はカッコで囲む
+const makeUser = (name) => ({ name, createdAt: new Date() });
+```
+
+## 引数と戻り値
+
+```javascript
+// デフォルト値
+function createUser(name, role = "user") {
+  return { name, role };
+}
+createUser("田中");         // { name: "田中", role: "user" }
+createUser("管理者", "admin"); // { name: "管理者", role: "admin" }
+
+// 残余引数（rest parameters）
+function sum(...numbers) {
+  return numbers.reduce((total, n) => total + n, 0);
+}
+sum(1, 2, 3, 4, 5); // 15
+
+// 分割代入を引数に
+function displayUser({ name, age }) {
+  console.log(`${name}（${age}歳）`);
+}
+displayUser({ name: "田中", age: 25 });
+```
+
+## スコープ
+
+スコープとは変数にアクセスできる範囲のことです。
+
+```javascript
+const global = "グローバル"; // どこからでもアクセス可能
+
+function outer() {
+  const outerVar = "外側";
+
+  function inner() {
+    const innerVar = "内側";
+    console.log(global);   // OK
+    console.log(outerVar); // OK（クロージャ）
+    console.log(innerVar); // OK
+  }
+
+  inner();
+  console.log(innerVar); // エラー！innerVarにアクセスできない
+}
+```
+
+`const`と`let`は**ブロックスコープ**（`{}`の中のみ有効）です。
+
+```javascript
+if (true) {
+  const blockVar = "ブロック内";
+  let alsoBlock = "こちらも";
+}
+console.log(blockVar); // エラー！スコープ外
+```
+
+## 高階関数
+
+関数を引数として受け取ったり、関数を返したりする関数を**高階関数**といいます。
+
+```javascript
+// 関数を引数として渡す
+function repeat(n, action) {
+  for (let i = 0; i < n; i++) {
+    action(i);
+  }
+}
+
+repeat(3, (i) => console.log(`${i}回目`));
+
+// 関数を返す
+function multiplier(factor) {
+  return (number) => number * factor;
+}
+
+const double = multiplier(2);
+const triple = multiplier(3);
+
+double(5); // 10
+triple(5); // 15
+```
+
+## 配列の高階メソッド
+
+```javascript
+const numbers = [1, 2, 3, 4, 5];
+
+// map: 各要素を変換して新しい配列を返す
+const doubled = numbers.map(n => n * 2);
+// [2, 4, 6, 8, 10]
+
+// filter: 条件に合う要素だけの配列を返す
+const evens = numbers.filter(n => n % 2 === 0);
+// [2, 4]
+
+// reduce: 配列を1つの値にまとめる
+const sum = numbers.reduce((acc, n) => acc + n, 0);
+// 15
+
+// find: 最初に条件を満たす要素を返す
+const first = numbers.find(n => n > 3);
+// 4
+
+// every / some
+numbers.every(n => n > 0); // true（全要素が0より大きい）
+numbers.some(n => n > 4);  // true（4より大きい要素が存在する）
+```
+
+<Callout type="tip" title="メソッドチェーン">
+配列メソッドは連鎖（チェーン）させて使えます：
+
+```javascript
+const result = [1, 2, 3, 4, 5]
+  .filter(n => n % 2 === 0)  // 偶数のみ: [2, 4]
+  .map(n => n * 10)           // 10倍: [20, 40]
+  .reduce((acc, n) => acc + n, 0); // 合計: 60
+```
+</Callout>
+
+## まとめ
+
+- アロー関数がモダンJavaScriptでの主流の書き方
+- デフォルト値・残余引数・分割代入で引数を柔軟に扱える
+- `const`/`let`はブロックスコープ
+- `map`・`filter`・`reduce`などの高階メソッドで配列を宣言的に操作できる

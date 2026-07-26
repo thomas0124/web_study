@@ -1,0 +1,188 @@
+---
+title: JSXとコンポーネント
+description: JSXの構文とReactコンポーネントの作り方を習得する
+---
+
+## JSXとは
+
+**JSX（JavaScript XML）**はJavaScriptの中にHTML-likeな構文を書くための拡張文法です。Reactと合わせて使うのが一般的です。
+
+```jsx
+// JSX
+const element = <h1 className="title">Hello, React!</h1>;
+
+// バベルがJavaScriptに変換する
+const element = React.createElement("h1", { className: "title" }, "Hello, React!");
+```
+
+JSXはブラウザが直接理解できないため、BabelやSWCがJavaScriptに変換します。
+
+## JSXの構文ルール
+
+### 1. 最上位要素は1つ
+
+```jsx
+// エラー: 複数のルート要素
+return (
+  <h1>タイトル</h1>
+  <p>テキスト</p>
+);
+
+// OK: 1つのルート要素で囲む
+return (
+  <div>
+    <h1>タイトル</h1>
+    <p>テキスト</p>
+  </div>
+);
+
+// OK: Fragmentを使う（余分なDOMを生成しない）
+return (
+  <>
+    <h1>タイトル</h1>
+    <p>テキスト</p>
+  </>
+);
+```
+
+### 2. className, htmlFor
+
+HTMLの`class`と`for`はJavaScriptの予約語のため、JSXでは別の名前を使います：
+
+```jsx
+<div className="container">  // class → className
+<label htmlFor="name">       // for → htmlFor
+```
+
+### 3. 自己閉じタグ
+
+```jsx
+<img src="photo.jpg" alt="写真" />
+<input type="text" />
+<br />
+```
+
+### 4. JavaScriptの式は`{}`で埋め込む
+
+```jsx
+const name = "田中";
+const score = 95;
+
+return (
+  <div>
+    <h1>こんにちは、{name}さん</h1>
+    <p>スコア: {score >= 90 ? "優秀" : "合格"}</p>
+    <p>{new Date().toLocaleDateString()}</p>
+  </div>
+);
+```
+
+### 5. スタイルはオブジェクトで
+
+```jsx
+<div style={{ backgroundColor: "blue", fontSize: "1.5rem" }}>
+  スタイル適用
+</div>
+// プロパティ名はキャメルケース（background-color → backgroundColor）
+```
+
+## 関数コンポーネント
+
+コンポーネントはJSXを返す関数です。名前は**大文字始まり**が必須です。
+
+```jsx
+// シンプルなコンポーネント
+function Greeting() {
+  return <h1>こんにちは！</h1>;
+}
+
+// アロー関数でも書ける
+const Greeting = () => <h1>こんにちは！</h1>;
+```
+
+## コンポーネントの組み合わせ
+
+```jsx
+function Avatar({ name, imageUrl }) {
+  return (
+    <div className="avatar">
+      <img src={imageUrl} alt={name} />
+      <span>{name}</span>
+    </div>
+  );
+}
+
+function UserCard({ user }) {
+  return (
+    <div className="card">
+      <Avatar name={user.name} imageUrl={user.imageUrl} />
+      <p>{user.bio}</p>
+    </div>
+  );
+}
+
+function App() {
+  const user = {
+    name: "田中太郎",
+    imageUrl: "/photos/tanaka.jpg",
+    bio: "フロントエンドエンジニア",
+  };
+
+  return <UserCard user={user} />;
+}
+```
+
+## 条件付きレンダリング
+
+```jsx
+function Notification({ type, message }) {
+  // 早期return
+  if (!message) return null;
+
+  // 三項演算子
+  return (
+    <div className={`alert ${type === "error" ? "alert-error" : "alert-info"}`}>
+      {message}
+    </div>
+  );
+}
+
+// &&演算子（条件が真のときのみ表示）
+function LoadingOverlay({ isLoading }) {
+  return (
+    <div>
+      {isLoading && <div className="spinner">読み込み中...</div>}
+      コンテンツ
+    </div>
+  );
+}
+```
+
+## リストのレンダリング
+
+```jsx
+function TodoList({ todos }) {
+  return (
+    <ul>
+      {todos.map((todo) => (
+        // keyは同じリスト内でユニークである必要がある
+        <li key={todo.id} className={todo.done ? "done" : ""}>
+          {todo.text}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+<Callout type="warning" title="keyは必須">
+リストで要素をレンダリングする際、`key`プロパティは必須です。Reactがリストの変更（追加・削除・並び替え）を効率的に検知するために使います。配列のインデックスは避け、安定したIDを使いましょう。
+</Callout>
+
+## まとめ
+
+- JSXはJavaScriptに変換されるHTML-like構文
+- ルート要素は1つ、classはclassName、forはhtmlFor
+- `{}`でJavaScriptの式を埋め込む
+- 条件付きレンダリングは三項演算子や&&演算子を使う
+- リストレンダリングには必ず`key`を付ける

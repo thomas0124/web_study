@@ -1,0 +1,8 @@
+{
+  "slug": "nodejs-backend",
+  "title": "Node.js/バックエンド",
+  "description": "サーバーサイド開発をNode.jsとExpress.jsで習得。REST API設計・認証・エラーハンドリングまでバックエンドエンジニアの基礎を身につける。",
+  "level": "中級",
+  "order": 6,
+  "lessonCount": 7
+}

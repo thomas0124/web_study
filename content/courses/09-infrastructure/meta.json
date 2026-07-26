@@ -1,0 +1,8 @@
+{
+  "slug": "infrastructure",
+  "title": "インフラ・デプロイ",
+  "description": "Gitによるバージョン管理・CI/CD・クラウドサービス・Dockerの基礎を学ぶ。開発したアプリを本番環境へ届けるための知識を習得する。",
+  "level": "上級",
+  "order": 9,
+  "lessonCount": 6
+}

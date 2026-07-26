@@ -1,0 +1,139 @@
+---
+title: 非同期処理の基礎
+description: JavaScriptのシングルスレッドとイベントループ、非同期処理の必要性を理解する
+---
+
+## JavaScriptはシングルスレッド
+
+JavaScriptはシングルスレッドで動作します。一度に1つの処理しか実行できません。しかし、ネットワーク通信やタイマーなど時間がかかる処理を待っていたら、ブラウザが完全に固まってしまいます。
+
+そこで**非同期処理**の仕組みが必要になります。
+
+## コールスタックとイベントループ
+
+JavaScriptの実行環境は主に以下の要素で構成されています：
+
+```
+  コールスタック   タスクキュー   マイクロタスクキュー
+  ┌─────────┐    ┌─────────┐    ┌─────────────────┐
+  │ main()  │    │callback1│    │  Promise.then   │
+  │ func1() │    │callback2│    │  queueMicrotask │
+  └─────────┘    └─────────┘    └─────────────────┘
+        ↑               ↑                ↑
+        └───────────────┴────────────────┘
+                   イベントループ
+```
+
+**イベントループ**の動作：
+1. コールスタックが空になる
+2. マイクロタスクキューを全部処理
+3. タスクキューから1つ取り出して実行
+4. 1に戻る
+
+## 非同期処理の例
+
+### setTimeoutとsetInterval
+
+```javascript
+console.log("1");
+
+setTimeout(() => {
+  console.log("3"); // 0ms後でも最後に実行される
+}, 0);
+
+console.log("2");
+
+// 出力: 1, 2, 3
+```
+
+```javascript
+// setInterval: 繰り返し実行
+const id = setInterval(() => {
+  console.log("毎秒実行");
+}, 1000);
+
+// 停止
+setTimeout(() => {
+  clearInterval(id);
+}, 5000); // 5秒後に停止
+```
+
+### コールバック地獄
+
+非同期処理を入れ子にしていくと「コールバック地獄」になります：
+
+```javascript
+// コールバック地獄の例
+getUserById(1, (user) => {
+  getOrdersByUser(user.id, (orders) => {
+    getProductByOrder(orders[0].id, (product) => {
+      getReviewsByProduct(product.id, (reviews) => {
+        console.log(reviews); // ネストが深い！
+      }, handleError);
+    }, handleError);
+  }, handleError);
+}, handleError);
+```
+
+このような問題を解決するために**Promise**と**async/await**が生まれました。
+
+## コールバック vs Promise vs async/await
+
+| 方法 | 可読性 | エラー処理 | 用途 |
+|------|--------|-----------|------|
+| コールバック | 低（地獄化） | 困難 | 古いAPI |
+| Promise | 中 | `.catch()` | 中間的 |
+| async/await | 高（同期的に見える） | try/catch | 現代的 |
+
+## Promiseの概要
+
+`Promise`はまだ完了していない非同期処理の**「約束」**を表すオブジェクトです。3つの状態があります：
+
+- **Pending（待機）**: まだ完了していない
+- **Fulfilled（成功）**: 正常に完了した
+- **Rejected（失敗）**: エラーで失敗した
+
+```javascript
+const promise = new Promise((resolve, reject) => {
+  setTimeout(() => {
+    if (Math.random() > 0.5) {
+      resolve("成功！");    // fulfillled状態に
+    } else {
+      reject(new Error("失敗...")); // rejected状態に
+    }
+  }, 1000);
+});
+
+promise
+  .then(result => console.log(result))
+  .catch(error => console.error(error));
+```
+
+## 同期と非同期の組み合わせ
+
+```javascript
+console.log("同期1");
+
+Promise.resolve().then(() => {
+  console.log("マイクロタスク"); // タスクキューより先に実行
+});
+
+setTimeout(() => {
+  console.log("タスク");
+}, 0);
+
+console.log("同期2");
+
+// 出力順: 同期1 → 同期2 → マイクロタスク → タスク
+```
+
+<Callout type="info" title="PromiseとMicrotask">
+Promiseのコールバック（`.then()`）はマイクロタスクキューに入り、`setTimeout`のコールバック（タスクキュー）より先に実行されます。この順序を理解しておくとバグの原因調査に役立ちます。
+</Callout>
+
+## まとめ
+
+- JavaScriptはシングルスレッドで一度に1つの処理のみ実行
+- イベントループがタスクキューからコールバックを取り出して実行する
+- コールバック→Promise→async/awaitと進化してきた
+- Promiseのthenはマイクロタスクとして優先的に実行される

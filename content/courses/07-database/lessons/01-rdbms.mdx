@@ -1,0 +1,139 @@
+---
+title: RDBMSとは
+description: リレーショナルデータベースの概念・テーブル・主キー・外部キーの基礎を理解する
+---
+
+## データベースの必要性
+
+データをファイルに保存することは可能ですが、以下の問題があります：
+- 複数ユーザーが同時に書き込むとデータが壊れる
+- 大量データから特定の条件で検索が遅い
+- データの整合性を保つのが難しい
+
+**データベース管理システム（DBMS）**はこれらの問題を解決します。
+
+## RDBMSとは
+
+**RDBMS（Relational Database Management System）**はデータを表（テーブル）形式で管理するDBMSです。1970年にE.F.Coddが提唱したリレーショナルモデルに基づいています。
+
+### 代表的なRDBMS
+
+| 製品 | 特徴 | 用途 |
+|------|------|------|
+| **PostgreSQL** | 高機能・JSON対応・OSS | Webアプリの本命 |
+| **MySQL** | 広く普及・高速読み込み | WordPress・多くのWebサービス |
+| **SQLite** | ファイル単体・軽量 | 組み込み・開発環境 |
+| **Oracle** | エンタープライズ向け | 大規模業務システム |
+| **SQL Server** | Microsoft製 | Windows環境 |
+
+## テーブルの構造
+
+テーブルはスプレッドシートに似た行と列の構造です。
+
+```
+usersテーブル
+┌────┬────────────┬──────────────────┬───────────────────────┐
+│ id │ name       │ email            │ created_at            │
+├────┼────────────┼──────────────────┼───────────────────────┤
+│  1 │ 田中太郎   │ tanaka@example.com│ 2026-01-01 10:00:00   │
+│  2 │ 鈴木花子   │ suzuki@example.com│ 2026-01-02 11:00:00   │
+│  3 │ 佐藤一郎   │ sato@example.com │ 2026-01-03 12:00:00   │
+└────┴────────────┴──────────────────┴───────────────────────┘
+   ↑
+   主キー（Primary Key）: 各行を一意に識別
+```
+
+## 主キー（Primary Key）
+
+主キーはテーブルの各行を一意に識別するカラムです。
+
+```sql
+CREATE TABLE users (
+  id         SERIAL PRIMARY KEY,  -- 自動連番の主キー
+  name       VARCHAR(100) NOT NULL,
+  email      VARCHAR(255) UNIQUE NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+主キーの条件：
+- 一意（重複しない）
+- NULLを含まない
+- 変更されない
+
+## 外部キー（Foreign Key）
+
+他のテーブルの主キーを参照するカラムです。テーブル間の関係を定義します。
+
+```sql
+CREATE TABLE posts (
+  id         SERIAL PRIMARY KEY,
+  user_id    INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  title      VARCHAR(255) NOT NULL,
+  content    TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+`posts.user_id`は`users.id`を参照します。存在しないユーザーIDの投稿は作成できません。
+
+## テーブル間の関係
+
+### 1対多（1:N）
+
+1人のユーザーが複数の投稿を持つ：
+
+```
+users (1) ──< posts (多)
+```
+
+### 多対多（M:N）
+
+1人のユーザーが複数のグループに属し、1つのグループに複数のユーザーが属する。中間テーブルで実現：
+
+```
+users >──< user_groups >──< groups
+```
+
+```sql
+CREATE TABLE user_groups (
+  user_id  INTEGER REFERENCES users(id),
+  group_id INTEGER REFERENCES groups(id),
+  PRIMARY KEY (user_id, group_id) -- 複合主キー
+);
+```
+
+### 1対1（1:1）
+
+ユーザーとユーザープロフィールが1対1対応：
+
+```sql
+CREATE TABLE user_profiles (
+  user_id  INTEGER PRIMARY KEY REFERENCES users(id),
+  avatar   VARCHAR(255),
+  bio      TEXT
+);
+```
+
+<Callout type="info" title="NULLと空文字">
+RDBMSでは`NULL`は「値が存在しない・不明」を意味します。空文字`""`とは異なります。`NULL = NULL`はfalseで、`IS NULL`で判定します。カラムに`NOT NULL`制約を付けることで誤ったNULLの挿入を防げます。
+</Callout>
+
+## ACID特性
+
+RDBMSの重要な性質：
+
+| 特性 | 意味 |
+|------|------|
+| **A**tomicity（原子性） | トランザクションは全成功か全失敗 |
+| **C**onsistency（整合性） | DBは常に正しい状態を保つ |
+| **I**solation（分離性） | 並行トランザクションは互いに影響しない |
+| **D**urability（永続性） | コミット済みデータは失われない |
+
+## まとめ
+
+- RDBMSはテーブル形式でデータを管理するデータベース
+- 主キーで各行を一意に識別する
+- 外部キーでテーブル間の関係と整合性を定義する
+- 1対多・多対多・1対1の関係をテーブル設計で表現できる
+- ACID特性でデータの信頼性を保証する

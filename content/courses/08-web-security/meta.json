@@ -1,0 +1,8 @@
+{
+  "slug": "web-security",
+  "title": "Webセキュリティ",
+  "description": "XSS・CSRF・SQLインジェクションなどの脅威と対策を学ぶ。OWASP Top 10を軸に、セキュアなWebアプリケーション開発の知識を身につける。",
+  "level": "上級",
+  "order": 8,
+  "lessonCount": 7
+}

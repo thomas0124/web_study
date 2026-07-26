@@ -1,0 +1,131 @@
+---
+title: クラウドサービス入門
+description: AWS・GCP・Azureの主要サービスと、Vercel・Renderなどのモダンなホスティングサービスを理解する
+---
+
+## クラウドとは
+
+**クラウドコンピューティング**はインターネット越しにサーバー・ストレージ・DBなどのITリソースを利用する形態です。自社でサーバーを購入・管理する必要がなくなります。
+
+## クラウドの3種類
+
+| サービスモデル | 管理範囲 | 例 | 用途 |
+|------------|--------|----|----|
+| **IaaS** | OS以上を管理 | EC2・GCE・Azure VM | 自由度高い |
+| **PaaS** | アプリのみ管理 | App Engine・Heroku | Webアプリ |
+| **SaaS** | 使うだけ | Gmail・Slack・GitHub | エンドユーザー |
+
+## 主要クラウドサービス（AWS）
+
+| サービス | 用途 |
+|---------|------|
+| **EC2** | 仮想サーバー（Linux/Windows） |
+| **RDS** | マネージドDB（PostgreSQL/MySQL） |
+| **S3** | オブジェクトストレージ（画像・ファイル） |
+| **CloudFront** | CDN（静的コンテンツの高速配信） |
+| **Lambda** | サーバーレス関数 |
+| **ECS/EKS** | コンテナオーケストレーション |
+| **Route 53** | DNSサービス |
+| **IAM** | アクセス権限管理 |
+
+## Webフロントエンドのホスティング
+
+### Vercel（Next.jsに最適）
+
+```bash
+# Vercel CLIでデプロイ
+pnpm install -g vercel
+vercel
+
+# 本番環境
+vercel --prod
+```
+
+- GitHubと連携してPRごとにプレビューURLが生成される
+- Edge Networkで世界中に高速配信
+- 環境変数もダッシュボードで管理
+
+### Cloudflare Pages
+
+```bash
+# Wranglerでデプロイ
+pnpm install -g wrangler
+wrangler pages deploy out/
+```
+
+## バックエンドのホスティング
+
+### Render
+
+```yaml
+# render.yaml
+services:
+  - type: web
+    name: my-api
+    env: node
+    buildCommand: pnpm install && pnpm build
+    startCommand: pnpm start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: my-db
+          property: connectionString
+
+databases:
+  - name: my-db
+    databaseName: myapp
+    user: myapp
+```
+
+### Railway
+
+GUIでDB + APIサーバーをワンクリックでデプロイ。個人開発に最適。
+
+## ストレージ（S3互換）
+
+```javascript
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+
+const s3 = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+});
+
+// ファイルをS3にアップロード
+async function uploadFile(key, buffer, contentType) {
+  await s3.send(new PutObjectCommand({
+    Bucket: process.env.S3_BUCKET,
+    Key: key,
+    Body: buffer,
+    ContentType: contentType,
+  }));
+
+  return `https://${process.env.S3_BUCKET}.s3.amazonaws.com/${key}`;
+}
+```
+
+## CDN（CloudFront）
+
+```javascript
+// CloudFrontのURLを通じて画像を配信
+const cdnUrl = (path) =>
+  `https://d1234567890.cloudfront.net/${path}`;
+
+// S3への直接アクセスよりCDN経由が高速・安価
+<img src={cdnUrl("images/avatar.jpg")} />
+```
+
+<Callout type="tip" title="コスト管理に注意">
+クラウドは使った分だけ課金されるため、コスト管理が重要です。AWSの場合、Cost Explorerで使用料を確認し、無料枠を超えないよう注意しましょう。個人開発では**Vercel（フロント）+ Render無料プラン（バックエンド）+ Neon（PostgreSQL）**の組み合わせが完全無料で始められます。
+</Callout>
+
+## まとめ
+
+- クラウドはIaaS・PaaS・SaaSの3種類がある
+- フロントエンドはVercel・Cloudflare Pagesが使いやすい
+- バックエンドはRender・Railwayが個人開発に最適
+- ファイルストレージにはS3（またはS3互換サービス）を使う
+- 個人開発ではVercel + Render + Neonで無料から始められる
