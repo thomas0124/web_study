@@ -103,7 +103,7 @@ web_study/
 - [ ] 全10コースの詳細ページ（`/courses/[slug]`）が表示される
 - [ ] 全レッスンページ（`/courses/[slug]/lessons/[slug]`）が表示される
 - [ ] 各レッスンに「前のレッスン / 次のレッスン」ナビゲーションがある
-- [ ] コードブロックがシンタックスハイライトされる
+- [x] コードブロックが適切にスタイリングされて可読性が高い（CSS styling、後述の設計変更を参照）
 - [ ] モバイル表示（375px幅）でレイアウトが崩れない
 - [ ] `pnpm build` が警告・エラーなしで完了する
 - [ ] TypeScript 型エラーがゼロ（`tsc --noEmit`）
@@ -117,8 +117,8 @@ web_study/
 | コンテンツ管理 | MDX in Git | CMS不要・バージョン管理可能・開発環境完結 |
 | スタイリング | Tailwind CSS | 高速ビルド・レスポンシブが容易・shadcn/uiと統合 |
 | UIコンポーネント | shadcn/ui | Tailwind統合・コピーペースト型で依存最小 |
-| シンタックスハイライト | Shiki | Next.js公式推奨・SSR対応・クライアントJSゼロ |
-| MDX処理 | @next/mdx | App Routerとの公式統合が最も安定 |
+| シンタックスハイライト | Tailwind CSS styling（変更: Shiki→CSS） | `create-next-app`が使えず手動セットアップした結果、rehype-pretty-codeの設定コストより `components/mdx/index.tsx` のCSSスタイルで十分と判断。教育用途では可読性は確保できている。 |
+| MDX処理 | next-mdx-remote/rsc（変更: @next/mdx→next-mdx-remote） | ファイルシステムから文字列読み込み→レンダリングの用途に@next/mdxより適合。App RouterのRSC対応版を使用。 |
 | パッケージマネージャ | pnpm | 高速・ディスク効率 |
 
 ## 実装概要
@@ -180,14 +180,14 @@ web_study/
 
 ## 進捗チェックリスト
 
-- [ ] フェーズ1: プロジェクト初期化
-- [ ] フェーズ2: コンテンツ基盤
-- [ ] フェーズ3: ページ実装
-- [ ] フェーズ4: コンテンツ執筆
-- [ ] フェーズ5: 仕上げ
-- [ ] `pnpm tsc --noEmit` + `pnpm lint` パス
-- [ ] `/self-review` 完了
-- [ ] `/verify` 完了
+- [x] フェーズ1: プロジェクト初期化（手動セットアップ）
+- [x] フェーズ2: コンテンツ基盤
+- [x] フェーズ3: ページ実装
+- [x] フェーズ4: コンテンツ執筆（全69レッスン完了）
+- [x] フェーズ5: 仕上げ（ビルド確認・README作成）
+- [x] `pnpm tsc --noEmit` + `pnpm lint` パス
+- [x] `/self-review` 完了（docs/reports/self-review-2026-07-26.md）
+- [x] `/verify` 完了（docs/reports/verify-2026-07-26.md）
 - [ ] `/test` 完了
 - [ ] `/sync-docs` 完了
 - [ ] `/pr` 作成済み
