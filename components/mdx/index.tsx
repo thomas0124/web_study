@@ -1,14 +1,10 @@
 import type { MDXComponents } from "mdx/types";
 import Callout from "./Callout";
+import CodeBlock from "./CodeBlock";
 
 export const mdxComponents: MDXComponents = {
   Callout,
-  pre: (props) => (
-    <pre
-      {...props}
-      className="rounded-lg bg-gray-900 dark:bg-gray-950 p-4 overflow-x-auto text-sm my-6"
-    />
-  ),
+  pre: CodeBlock,
   code: ({ children, className, ...props }) => {
     const isBlock = className?.startsWith("language-");
     if (isBlock) {
@@ -21,7 +17,7 @@ export const mdxComponents: MDXComponents = {
     return (
       <code
         {...props}
-        className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono text-pink-600 dark:text-pink-400"
+        className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono text-gray-800 dark:text-gray-200"
       >
         {children}
       </code>
