@@ -1,0 +1,2 @@
+- [Verify script quirks](verify_script_quirks.md) — run-static-verify.sh and verify-typescript.sh can misreport; run tsc/lint/build directly and cross-check.
+- [Content MDX no-mod check](content_mdx_nomod_check.md) — use `git log --diff-filter=M main..HEAD -- content/`, not `git diff main -- content/`, to check "did not modify" criteria.
