@@ -19,6 +19,7 @@ export const metadata: Metadata = {
   },
   description:
     "Web未経験者から仕事で使えるレベルまで。HTML/CSS・JavaScript・React・バックエンド・セキュリティを体系的に学ぶ無料学習サイト。",
+  icons: { icon: "/favicon.svg" },
 };
 
 export default function RootLayout({
