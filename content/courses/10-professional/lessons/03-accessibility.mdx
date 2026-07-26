@@ -1,0 +1,154 @@
+---
+title: アクセシビリティ
+description: WCAG・セマンティックHTML・ARIAを使って障害を持つユーザーも使えるWebを作る方法を学ぶ
+---
+
+## アクセシビリティとは
+
+**アクセシビリティ（a11y）**はすべての人がWebを使えるようにすることです。
+
+対象となるユーザー：
+- **視覚障害**: スクリーンリーダーを使うユーザー
+- **運動障害**: マウスを使えずキーボードのみのユーザー
+- **聴覚障害**: 音声コンテンツに字幕が必要なユーザー
+- **認知障害**: シンプルで一貫したUIが必要なユーザー
+
+## WCAG（ウェブアクセシビリティガイドライン）
+
+**WCAG 2.1**はアクセシビリティの国際標準です。4原則（POUR）で構成されます：
+
+| 原則 | 内容 |
+|------|------|
+| **P**erceivable（知覚可能） | テキスト代替・字幕・コントラスト |
+| **O**perable（操作可能） | キーボード操作・タイムアウト |
+| **U**nderstandable（理解可能） | 言語設定・エラー説明 |
+| **R**obust（堅牢） | 支援技術との互換性 |
+
+## セマンティックHTML
+
+```html
+<!-- ❌ 非セマンティック -->
+<div class="header">
+  <div class="nav">
+    <div class="nav-item" onclick="navigate()">ホーム</div>
+  </div>
+</div>
+<div class="main">...</div>
+<div class="footer">...</div>
+
+<!-- ✅ セマンティック（スクリーンリーダーが構造を理解できる） -->
+<header>
+  <nav>
+    <ul>
+      <li><a href="/">ホーム</a></li>
+    </ul>
+  </nav>
+</header>
+<main>...</main>
+<footer>...</footer>
+```
+
+## 画像の代替テキスト
+
+```html
+<!-- 情報を持つ画像 -->
+<img src="chart.png" alt="2026年第1四半期の売上グラフ。前年比20%増" />
+
+<!-- 装飾的な画像はalt=""（スクリーンリーダーがスキップ） -->
+<img src="decorative-divider.png" alt="" />
+
+<!-- Next.jsで -->
+<Image src="/avatar.jpg" alt="田中太郎のプロフィール写真" width={50} height={50} />
+```
+
+## キーボード操作
+
+```html
+<!-- フォーカスができる要素 -->
+<button onClick={handleClick}>送信</button>
+<a href="/next">次へ</a>
+<input type="text" />
+
+<!-- ❌ クリックイベントをdivに付けるとキーボード操作できない -->
+<div onClick={handleClick}>送信</div>
+
+<!-- ✅ buttonを使う（Enterキーで操作可能） -->
+<button onClick={handleClick}>送信</button>
+
+<!-- カスタム要素にキーボード操作を追加 -->
+<div
+  role="button"
+  tabIndex={0}
+  onClick={handleClick}
+  onKeyDown={(e) => e.key === "Enter" && handleClick()}
+>
+  送信
+</div>
+```
+
+## ARIAラベル
+
+スクリーンリーダーに追加情報を提供する：
+
+```html
+<!-- ボタンのテキストが不十分な場合 -->
+<button aria-label="検索ボタン">
+  <SearchIcon />
+</button>
+
+<!-- 状態を伝える -->
+<button aria-expanded={isOpen} onClick={toggleMenu}>
+  メニュー
+</button>
+
+<!-- エラーメッセージを入力欄に紐付ける -->
+<input
+  id="email"
+  type="email"
+  aria-describedby="email-error"
+  aria-invalid={hasError}
+/>
+<span id="email-error" role="alert">
+  有効なメールアドレスを入力してください
+</span>
+
+<!-- ライブリージョン（動的に更新される内容） -->
+<div role="status" aria-live="polite">
+  {statusMessage}
+</div>
+```
+
+## カラーコントラスト
+
+テキストとbg色のコントラスト比：
+- 通常テキスト: **4.5:1以上**
+- 大きいテキスト（18px以上): **3:1以上**
+
+```css
+/* ❌ コントラスト不足（グレーテキストに注意） */
+.label { color: #9CA3AF; background: #FFFFFF; } /* 2.9:1 */
+
+/* ✅ 十分なコントラスト */
+.label { color: #6B7280; background: #FFFFFF; } /* 4.6:1 */
+```
+
+<Callout type="tip" title="axeでアクセシビリティをテスト">
+`@axe-core/react`を使うとReactアプリのアクセシビリティ問題をコンソールに表示できます：
+
+```javascript
+if (process.env.NODE_ENV !== "production") {
+  const { default: axe } = await import("@axe-core/react");
+  axe(React, ReactDOM, 1000);
+}
+```
+
+Chrome拡張の「axe DevTools」でページを手軽に検査できます。
+</Callout>
+
+## まとめ
+
+- アクセシビリティはすべてのユーザーが使えるWebを作ること
+- セマンティックHTMLがアクセシビリティの基礎
+- 画像には意味のあるaltテキストを付ける
+- インタラクティブ要素はbuttonやaを使いキーボード操作できるようにする
+- ARIAで状態や追加情報をスクリーンリーダーに伝える

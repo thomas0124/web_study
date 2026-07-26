@@ -1,0 +1,8 @@
+{
+  "slug": "html-css",
+  "title": "HTML/CSS実践",
+  "description": "Webページの骨格と見た目を作るHTML・CSSを習得。Flexbox・Gridレイアウトからレスポンシブデザインまでを実践的に学ぶ。",
+  "level": "入門",
+  "order": 2,
+  "lessonCount": 8
+}

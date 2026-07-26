@@ -1,0 +1,165 @@
+---
+title: CSSセレクタ
+description: CSS のセレクタの種類と詳細度（Specificity）を理解し、スタイルを正確に当てる
+---
+
+## CSSの基本構文
+
+CSS（Cascading Style Sheets）はHTMLの見た目を定義する言語です。
+
+```css
+/* セレクタ { プロパティ: 値; } */
+h1 {
+  color: #333333;
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+```
+
+## セレクタの種類
+
+### 基本セレクタ
+
+```css
+/* タイプセレクタ（要素名） */
+p { color: gray; }
+
+/* クラスセレクタ */
+.highlight { background: yellow; }
+
+/* IDセレ���タ */
+#main-title { font-size: 2rem; }
+
+/* 全称��レクタ */
+* { box-sizing: border-box; }
+```
+
+### 属性セレクタ
+
+```css
+/* 属性を持つ要素 */
+input[required] { border: 2px solid red; }
+
+/* 属性の値が一致 */
+a[target="_blank"] { color: orange; }
+
+/* 属性の値で始まる */
+a[href^="https"] { color: green; }
+
+/* 属性の値で終わる */
+a[href$=".pdf"] { content: " (PDF)"; }
+```
+
+### 疑似クラス
+
+```css
+/* ホバー時 */
+a:hover { text-decoration: underline; }
+
+/* フォーカス時 */
+input:focus { outline: 2px solid blue; }
+
+/* 最初の子要素 */
+li:first-child { font-weight: bold; }
+
+/* 最後の子要素 */
+li:last-child { border-bottom: none; }
+
+/* n番目の子要素 */
+tr:nth-child(even) { background: #f5f5f5; }
+
+/* チェック済み */
+input:checked + label { color: blue; }
+
+/* 無効化された要素 */
+button:disabled { opacity: 0.5; }
+```
+
+### 疑似要素
+
+```css
+/* 要素の前にコンテンツを挿入 */
+.required::before {
+  content: "* ";
+  color: red;
+}
+
+/* 要素の後にコンテンツを挿入 */
+p::after {
+  content: " →";
+}
+
+/* テキストの最初の行 */
+p::first-line { font-weight: bold; }
+
+/* テキスト選択時 */
+::selection {
+  background: #b3d4fc;
+}
+```
+
+## 結合子（Combinator）
+
+```css
+/* 子孫結合子（スペース）: 内側のすべての一致要素 */
+nav a { color: white; }
+
+/* 子結合子（>）: 直接の子要素のみ */
+ul > li { list-style: disc; }
+
+/* 隣接兄弟結合子（+）: 直後の兄弟要素 */
+h2 + p { margin-top: 0; }
+
+/* 一般兄弟結合子（~）: 後の���弟要素すべて */
+h2 ~ p { color: gray; }
+```
+
+## 詳細度（Specificity）
+
+複数のス���イルが同じ要素に当たる場合、**詳細度**が高いルールが優先されます。
+
+詳細度の計算（(A, B, C)で表現）：
+
+| セレクタ | A (ID) | B (クラス/属性/疑似クラス) | C (タグ/疑似要素) | 合計 |
+|---------|--------|--------------------------|-------------------|------|
+| `*` | 0 | 0 | 0 | (0,0,0) |
+| `p` | 0 | 0 | 1 | (0,0,1) |
+| `.class` | 0 | 1 | 0 | (0,1,0) |
+| `#id` | 1 | 0 | 0 | (1,0,0) |
+| `#id .class p` | 1 | 1 | 1 | (1,1,1) |
+
+<Callout type="warning" title="!importantの乱用に注意">
+`color: red !important;`のように`!important`を使うと他のすべてのスタイルを上書きできますが、乱用するとスタイルの管理が困難になります。本当に必要な場合以外は使わないようにしましょう。
+</Callout>
+
+## カスケード（優先順位）
+
+同じ詳細度の場合、**後に書かれたルールが優先**されます（Cascading）。
+
+```css
+p { color: red; }
+p { color: blue; } /* こちらが適用される */
+```
+
+## CSS変数（カスタムプロパティ）
+
+```css
+:root {
+  --primary: #3b82f6;
+  --spacing-md: 1rem;
+}
+
+button {
+  background: var(--primary);
+  padding: var(--spacing-md);
+}
+```
+
+CSS変数を使うとテーマの一元管理が容易になります。
+
+## まとめ
+
+- タイプ・クラス・ID・属性・疑似クラス・疑似要素など多様なセレクタがある
+- 詳細度によってどのスタイルが適用されるか決まる
+- 結合子で要素の関係を指定してスタイルを絞り込める
+- CSS変数でデザインの一元管理ができる

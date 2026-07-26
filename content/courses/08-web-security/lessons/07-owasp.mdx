@@ -1,0 +1,153 @@
+---
+title: OWASP Top 10
+description: WebアプリのセキュリティリスクをまとめたOWASP Top 10の各項目と対策を学ぶ
+---
+
+## OWASP Top 10とは
+
+**OWASP（Open Worldwide Application Security Project）**は非営利のセキュリティ組織です。**OWASP Top 10**はWebアプリケーションの最も重大なセキュリティリスクトップ10で、定期的に更新されます（最新: 2021年版）。
+
+## 2021年版 Top 10
+
+### A01: アクセス制御の不備
+
+認証済みユーザーが本来アクセスできないリソースにアクセスできる：
+
+```javascript
+// 脆弱な例: URLのuser_idを検証していない
+app.get("/users/:id/profile", authenticate, (req, res) => {
+  // req.params.idが自分のIDかチェックしていない！
+  const profile = await db.getUser(req.params.id);
+  res.json(profile);
+});
+
+// 対策: 本人かadminだけ許可
+app.get("/users/:id/profile", authenticate, (req, res) => {
+  if (req.user.id !== Number(req.params.id) && req.user.role !== "admin") {
+    return res.status(403).json({ error: "アクセス権限がありません" });
+  }
+  // ...
+});
+```
+
+### A02: 暗号化の失敗
+
+機密データの平文保存・弱い暗号化：
+
+```javascript
+// ❌ 脆弱: パスワードを平文保存
+await db.users.create({ password: req.body.password });
+
+// ❌ 脆弱: MD5/SHA1でハッシュ化（レインボーテーブル攻撃に弱い）
+const hash = crypto.createHash("md5").update(password).digest("hex");
+
+// ✅ 安全: bcryptで強くハッシュ化
+const hash = await bcrypt.hash(password, 12);
+```
+
+### A03: インジェクション
+
+SQLインジェクション・XSS・コマンドインジェクション（前のレッスンで詳述）。
+
+```javascript
+// コマンドインジェクション
+import { exec } from "child_process";
+
+// ❌ 危険
+exec(`ping ${req.body.host}`); // "127.0.0.1; rm -rf /" が入ると...
+
+// ✅ 安全（引数を分けてshellを使わない）
+import { execFile } from "child_process";
+execFile("ping", [req.body.host]); // shellを経由しない
+```
+
+### A04: 安全でない設計
+
+脅威モデリングを行わず、セキュリティを後付けにした設計：
+
+**対策**: 設計段階から「攻撃者はどう悪用するか？」を考える。ユーザーストーリーにセキュリティ要件を含める。
+
+### A05: セキュリティの設定ミス
+
+デフォルト設定・不要な機能の有効化：
+
+```javascript
+// ❌ デバッグ情報を本番でも返す
+app.use((err, req, res, next) => {
+  res.status(500).json({ error: err.stack }); // スタックトレースを返す
+});
+
+// ✅ 本番では詳細を隠す
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ error: "サーバーエラーが発生しました" });
+});
+```
+
+### A06: 脆弱で古いコンポーネント
+
+依存パッケージの脆弱性：
+
+```bash
+# 定期的に実行する
+npm audit
+npm audit fix
+
+# 自動的にPRを作ってくれるサービス
+# GitHub: Dependabot
+# Snyk
+```
+
+### A07: 識別と認証の失敗
+
+弱いパスワード・セッション管理の不備（認証レッスンで詳述）。
+
+### A08: ソフトウェアとデータの整合性の失敗
+
+CI/CDパイプラインへの不正アクセス・サプライチェーン攻撃：
+
+**対策**: 依存パッケージをロックファイルで固定。CI/CDの秘密情報管理を適切に。
+
+### A09: セキュリティのログとモニタリングの失敗
+
+攻撃を検知・対応できない：
+
+```javascript
+// セキュリティイベントを必ずログに記録
+logger.warn({
+  event: "FAILED_LOGIN",
+  email: req.body.email,
+  ip: req.ip,
+  userAgent: req.headers["user-agent"],
+  timestamp: new Date().toISOString(),
+});
+```
+
+### A10: サーバーサイドリクエストフォージェリ（SSRF）
+
+攻撃者がサーバーに内部ネットワークへのリクエストを送らせる：
+
+```javascript
+// 脆弱な例
+app.post("/fetch-url", async (req, res) => {
+  const response = await fetch(req.body.url); // http://localhost/admin に誘導できる
+
+// 対策: URLを検証
+const allowedHosts = ["api.example.com", "cdn.example.com"];
+const url = new URL(req.body.url);
+if (!allowedHosts.includes(url.hostname)) {
+  return res.status(400).json({ error: "許可されていないURL" });
+}
+```
+
+<Callout type="info" title="OWASP ZAPで自動スキャン">
+**OWASP ZAP**は無料のWebアプリ脆弱性スキャナーです。開発中のアプリにOWASP ZAPを向けてスキャンすることで、セキュリティ問題を発見できます。
+</Callout>
+
+## まとめ
+
+- OWASP Top 10は最重要Webセキュリティリスクの標準リスト
+- アクセス制御・暗号化・インジェクション・設定ミスが常に上位
+- 依存パッケージの脆弱性チェックを定期実行する
+- セキュリティイベントを必ずログに記録して監視する
+- OWASP ZAPで自動スキャンを活用する

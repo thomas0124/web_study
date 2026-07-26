@@ -1,0 +1,191 @@
+---
+title: Docker基礎
+description: Dockerコンテナの概念・Dockerfile・docker-composeを使った開発環境の構築方法を学ぶ
+---
+
+## Dockerとは
+
+**Docker**はアプリケーションをコンテナとして実行するプラットフォームです。
+
+コンテナはアプリと依存関係（ランタイム・ライブラリ）をひとまとめにした軽量な実行環境です。
+
+```
+「私のPCでは動くのに本番では動かない」問題を解決！
+
+開発環境: Mac
+本番環境: Linux Ubuntu
+  ↓ Dockerなら
+両方で同じDockerイメージを実行 → 同じ動作が保証される
+```
+
+## 仮想マシンとコンテナの違い
+
+```
+仮想マシン:          コンテナ:
+┌──────────────┐    ┌────────────────────┐
+│ App           │    │ App A │ App B      │
+│ ゲストOS     │    │ ライブラリ          │
+│ ハイパーバイザ│    │ コンテナランタイム  │
+│ ホストOS     │    │ ホストOS           │
+│ ハードウェア │    │ ハードウェア       │
+└──────────────┘    └────────────────────┘
+起動: 数分            起動: 秒以下
+サイズ: GB             サイズ: MB
+```
+
+## Dockerfile
+
+```dockerfile
+# Node.jsアプリのDockerfile
+FROM node:20-alpine
+
+# 作業ディレクトリ
+WORKDIR /app
+
+# 依存関係のインストール（キャッシュを活用するため先に）
+COPY package.json pnpm-lock.yaml ./
+RUN npm install -g pnpm && pnpm install --frozen-lockfile
+
+# ソースコードのコピー
+COPY . .
+
+# ビルド
+RUN pnpm build
+
+# ポートの公開
+EXPOSE 3000
+
+# 起動コマンド
+CMD ["pnpm", "start"]
+```
+
+## よく使うDockerコマンド
+
+```bash
+# イメージのビルド
+docker build -t my-app:latest .
+docker build -t my-app:v1.0 .
+
+# コンテナの起動
+docker run -p 3000:3000 my-app
+docker run -p 3000:3000 -d my-app  # バックグラウンドで起動
+docker run -p 3000:3000 -e DATABASE_URL=... my-app  # 環境変数
+
+# コンテナの確認・停止
+docker ps            # 実行中のコンテナ
+docker ps -a         # 全コンテナ
+docker stop <id>
+docker rm <id>
+
+# ログの確認
+docker logs <id>
+docker logs -f <id>  # リアルタイム
+
+# コンテナ内でコマンド実行
+docker exec -it <id> sh
+```
+
+## Docker Compose
+
+複数コンテナを一括管理できます：
+
+```yaml
+# docker-compose.yml
+version: "3.9"
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgres://user:password@db:5432/myapp
+      - NODE_ENV=development
+    volumes:
+      - .:/app              # ソースコードをマウント（ホットリロード）
+      - /app/node_modules   # node_modulesはコンテナのものを使う
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: myapp
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d myapp"]
+      interval: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
+```
+
+```bash
+# 全サービスを起動
+docker compose up -d
+
+# ログを確認
+docker compose logs -f app
+
+# 全サービスを停止・削除
+docker compose down
+
+# データも含めて削除
+docker compose down -v
+```
+
+## マルチステージビルド（本番用最適化）
+
+```dockerfile
+# ビルドステージ
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# 本番ステージ（ビルド成果物のみ）
+FROM node:20-alpine AS runner
+WORKDIR /app
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/package.json ./
+RUN npm install --production
+CMD ["npm", "start"]
+# → ビルドツール不要でイメージサイズを削減
+```
+
+<Callout type="tip" title=".dockerignoreを忘れずに">
+`.gitignore`のようにDockerfileのCOPY命令で除外するファイルを指定します：
+
+```
+node_modules
+.next
+.git
+*.log
+.env
+```
+
+`node_modules`を除外しないとイメージサイズが数GBになることも。
+</Callout>
+
+## まとめ
+
+- Dockerはアプリと依存関係をコンテナにまとめて環境差異をなくす
+- Dockerfileでイメージを定義し`docker build`でビルド
+- docker-composeで複数コンテナ（アプリ・DB・Redis）を一括管理
+- マルチステージビルドで本番イメージを軽量化できる
+- `.dockerignore`でnode_modulesなどを除外する

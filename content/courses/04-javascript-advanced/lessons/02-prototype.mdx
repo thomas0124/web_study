@@ -1,0 +1,173 @@
+---
+title: プロトタイプと継承
+description: JavaScriptのプロトタイプチェーンとES6クラス構文を理解する
+---
+
+## JavaScriptの継承の仕組み
+
+JavaScriptの継承はJavaやPythonとは根本的に異なります。**プロトタイプ**と呼ばれるオブジェクトへの参照を通じて、メソッドやプロパティを共有します。
+
+## プロトタイプチェーン
+
+すべてのオブジェクトは`[[Prototype]]`（`__proto__`）という隠れたプロパティを持ち、別のオブジェクトを参照しています。プロパティを探すとき、自分にない場合は参照先（プロトタイプ）を順にたどります。これを**プロトタイプチェーン**といいます。
+
+```javascript
+const arr = [1, 2, 3];
+// arr → Array.prototype → Object.prototype → null
+
+arr.push(4);    // Array.prototypeのpushメソッドを使用
+arr.toString(); // Object.prototypeのtoStringを使用
+
+// プロトタイプを確認
+Object.getPrototypeOf(arr) === Array.prototype; // true
+```
+
+## コンストラクタ関数（旧方式）
+
+```javascript
+function Person(name, age) {
+  this.name = name;
+  this.age = age;
+}
+
+// プロトタイプにメソッドを追加（インスタンス間で共有）
+Person.prototype.greet = function() {
+  return `こんにちは、${this.name}です。`;
+};
+
+const tanaka = new Person("田中", 25);
+tanaka.greet(); // "こんにちは、田中です。"
+```
+
+## classによる構文糖衣
+
+ES6で導入された`class`はプロトタイプベースの継承をわかりやすく書ける**構文糖衣**です。内部的には同じプロトタイプの仕組みを使っています。
+
+```javascript
+class Person {
+  constructor(name, age) {
+    this.name = name;
+    this.age = age;
+  }
+
+  // インスタンスメソッド（prototype に追加される）
+  greet() {
+    return `こんにちは、${this.name}です。`;
+  }
+
+  // ゲッター
+  get info() {
+    return `${this.name}（${this.age}歳）`;
+  }
+
+  // 静的メソッド（インスタンスではなくクラス自体に属する）
+  static create(name, age) {
+    return new Person(name, age);
+  }
+}
+
+const tanaka = new Person("田中", 25);
+tanaka.greet();   // "こんにちは、田中です。"
+tanaka.info;      // "田中（25歳）"
+Person.create("鈴木", 30); // 静的メソッド
+```
+
+## 継承（extends）
+
+```javascript
+class Animal {
+  constructor(name) {
+    this.name = name;
+  }
+
+  speak() {
+    return `${this.name}が鳴いています`;
+  }
+}
+
+class Dog extends Animal {
+  constructor(name, breed) {
+    super(name); // 親クラスのコンストラクタを呼ぶ
+    this.breed = breed;
+  }
+
+  speak() {
+    return `${this.name}がワンワンと吠えています`;
+  }
+
+  // 親クラスのメソッドを呼び出す
+  parentSpeak() {
+    return super.speak();
+  }
+}
+
+const dog = new Dog("ポチ", "柴犬");
+dog.speak();       // "ポチがワンワンと吠えています"
+dog.parentSpeak(); // "ポチが鳴いています"
+dog instanceof Dog;    // true
+dog instanceof Animal; // true
+```
+
+## プライベートフィールド（ES2022）
+
+```javascript
+class BankAccount {
+  #balance = 0;  // #で始まるフィールドはプライベート
+
+  deposit(amount) {
+    if (amount <= 0) throw new Error("入金額は正の数が必要");
+    this.#balance += amount;
+  }
+
+  get balance() {
+    return this.#balance;
+  }
+}
+
+const account = new BankAccount();
+account.deposit(1000);
+account.balance;  // 1000
+account.#balance; // SyntaxError（外部からアクセス不可）
+```
+
+<Callout type="tip" title="クラスよりも関数とオブジェクトを優先">
+JavaScriptでは必ずしもクラスを使う必要はありません。シンプルなデータ構造には`{}}`オブジェクトや関数を使い、複雑な継承が必要な場合にのみクラスを検討しましょう。過度な継承は複雑さを増します。
+</Callout>
+
+## Mixinパターン
+
+JavaScriptはシングル継承ですが、Mixinで複数のふるまいを合成できます：
+
+```javascript
+const Serializable = (Base) => class extends Base {
+  serialize() {
+    return JSON.stringify(this);
+  }
+};
+
+const Validatable = (Base) => class extends Base {
+  validate() {
+    return Object.values(this).every(v => v !== null);
+  }
+};
+
+class User extends Serializable(Validatable(class {})) {
+  constructor(name, email) {
+    super();
+    this.name = name;
+    this.email = email;
+  }
+}
+
+const user = new User("田中", "tanaka@example.com");
+user.serialize();  // '{"name":"田中","email":"tanaka@example.com"}'
+user.validate();   // true
+```
+
+## まとめ
+
+- JavaScriptの継承はプロトタイプチェーンに基づく
+- `class`は読みやすい構文糖衣で、内部はプロトタイプを使う
+- `extends`と`super`で親クラスを継承・呼び出せる
+- `#`プレフィックスでプライベートフィールドを定義できる
+- 過度な継承を避け、コンポジションやMixinを活用する

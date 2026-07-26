@@ -1,0 +1,171 @@
+---
+title: Next.js入門
+description: ReactフレームワークNext.jsのApp Routerの基本を学び、本格的なWebアプリ開発の出発点を知る
+---
+
+## Next.jsとは
+
+**Next.js**はVercelが開発したReactのフレームワークです。Reactだけでは提供されないSSR・SSG・ルーティング・画像最適化などの機能が内蔵されています。
+
+Reactが「エンジン」なら、Next.jsは「完成した車」です。
+
+## App RouterとPages Router
+
+Next.jsには2つのルーティングシステムがあります。現在はApp Routerが推奨です。
+
+| | App Router（推奨） | Pages Router（旧） |
+|-|----------|----------|
+| ディレクトリ | `app/` | `pages/` |
+| デフォルト | Server Component | Client Component |
+| データ取得 | fetch + async/await | getServerSideProps等 |
+
+## ファイルベースルーティング
+
+```
+app/
+├── page.tsx              → /
+├── about/
+│   └── page.tsx          → /about
+├── blog/
+│   ├── page.tsx          → /blog
+│   └── [slug]/
+│       └── page.tsx      → /blog/任意のslug
+└── (auth)/               → (auth)はURLに含まれないグループ
+    ├── login/
+    │   └── page.tsx      → /login
+    └── register/
+        └── page.tsx      → /register
+```
+
+## Server ComponentとClient Component
+
+App Routerではデフォルトで**Server Component**（サーバーで実行）です。
+
+```tsx
+// Server Component（デフォルト）
+// - サーバーで実行される
+// - stateやイベントは使えない
+// - データベースに直接アクセス可能
+
+async function BlogList() {
+  // サーバーで直接DBアクセス可能
+  const posts = await db.posts.findMany();
+
+  return (
+    <ul>
+      {posts.map(post => (
+        <li key={post.id}>{post.title}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+```tsx
+"use client"; // Client Componentを宣言
+
+// Client Component
+// - ブラウザで実行される
+// - useState・useEffectが使える
+// - イベントハンドラが使える
+
+import { useState } from "react";
+
+function LikeButton({ postId }: { postId: number }) {
+  const [likes, setLikes] = useState(0);
+  return (
+    <button onClick={() => setLikes(l => l + 1)}>
+      ❤️ {likes}
+    </button>
+  );
+}
+```
+
+<Callout type="tip" title="境界を小さく保つ">
+「use client」が必要なコンポーネントは可能な限り葉（末端）のコンポーネントにしましょう。親がClient Componentになると、その子孫もすべてClient Componentになります。
+</Callout>
+
+## データ取得
+
+```tsx
+// Server Componentでの非同期データ取得
+async function UserPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const user = await fetch(`https://api.example.com/users/${id}`, {
+    cache: "force-cache",     // 静的キャッシュ
+    // cache: "no-store",     // 毎回取得
+    // next: { revalidate: 60 } // 60秒ごとに再検証
+  }).then(r => r.json());
+
+  return <h1>{user.name}</h1>;
+}
+```
+
+## メタデータ
+
+```tsx
+// app/layout.tsx
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: {
+    default: "My App",
+    template: "%s | My App",
+  },
+  description: "アプリの説明",
+};
+
+// app/blog/[slug]/page.tsx
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const post = await getPost(slug);
+  return {
+    title: post.title,
+    description: post.excerpt,
+  };
+}
+```
+
+## ナビゲーション
+
+```tsx
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+// Linkコンポーネント（プリフェッチ自動）
+<Link href="/about">会社概要</Link>
+<Link href={`/blog/${post.slug}`}>{post.title}</Link>
+
+// プログラマティックなナビゲーション（Client Component内）
+"use client";
+const router = useRouter();
+router.push("/dashboard");
+router.replace("/login");    // 履歴を置き換え
+router.back();               // 戻る
+```
+
+## 画像最適化
+
+```tsx
+import Image from "next/image";
+
+// 自動的に最適化（WebP変換・遅延ロード・サイズ最適化）
+<Image
+  src="/hero.jpg"
+  alt="ヒーロー画像"
+  width={800}
+  height={400}
+  priority  // 最初に表示される重要な画像
+/>
+```
+
+## まとめ
+
+- Next.jsはSSR・SSG・ルーティングなどを内蔵したReactフレームワーク
+- App RouterはファイルシステムベースでURLが自動生成される
+- Server Componentがデフォルト、インタラクティブ部分は`"use client"`で宣言
+- `Link`と`Image`コンポーネントでパフォーマンスを自動最適化

@@ -1,0 +1,165 @@
+---
+title: ORM入門
+description: PrismaなどのORMを使ってJavaScriptからデータベースを型安全に操作する方法を学ぶ
+---
+
+## ORMとは
+
+**ORM（Object-Relational Mapping）**はオブジェクト指向言語からリレーショナルDBを操作するための仕組みです。SQLを直接書く代わりに、言語ネイティブのAPIでDB操作ができます。
+
+## ORMのメリット・デメリット
+
+| | メリット | デメリット |
+|-|---------|----------|
+| 生産性 | コード量が減る | 複雑なクエリは難しい |
+| 型安全性 | TypeScriptとの統合 | — |
+| 移植性 | DB変更が容易 | ORM固有の学習コスト |
+| パフォーマンス | N+1自動対処 | 非効率なSQLが生成されることも |
+
+## Prismaの基本
+
+**Prisma**は現代的なNode.js/TypeScript向けORMです。型安全なAPIと自動マイグレーションが特徴です。
+
+### セットアップ
+
+```bash
+pnpm install prisma @prisma/client
+pnpm prisma init
+```
+
+### スキーマ定義（prisma/schema.prisma）
+
+```prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String
+  posts     Post[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Post {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String?
+  published Boolean  @default(false)
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  Int
+  createdAt DateTime @default(now())
+}
+```
+
+### マイグレーション
+
+```bash
+# マイグレーションを作成・適用
+pnpm prisma migrate dev --name init
+
+# 本番環境への適用
+pnpm prisma migrate deploy
+
+# Prisma Studioで視覚的にDBを閲覧
+pnpm prisma studio
+```
+
+## Prismaの基本操作
+
+```javascript
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
+
+// CREATE
+const user = await prisma.user.create({
+  data: {
+    email: "tanaka@example.com",
+    name: "田中太郎",
+  },
+});
+
+// READ（一件）
+const user = await prisma.user.findUnique({
+  where: { id: 1 },
+  include: { posts: true }, // リレーションを含む
+});
+
+// READ（複数）
+const users = await prisma.user.findMany({
+  where: {
+    email: { contains: "@example.com" },
+  },
+  orderBy: { createdAt: "desc" },
+  skip: 0,
+  take: 10,
+});
+
+// UPDATE
+const updated = await prisma.user.update({
+  where: { id: 1 },
+  data: { name: "田中次郎" },
+});
+
+// DELETE
+await prisma.user.delete({
+  where: { id: 1 },
+});
+
+// 集計
+const count = await prisma.post.count({
+  where: { published: true },
+});
+```
+
+## トランザクション
+
+```javascript
+// 複数操作をトランザクションで実行
+const [user, post] = await prisma.$transaction([
+  prisma.user.create({ data: { email: "new@example.com", name: "新規" } }),
+  prisma.post.create({ data: { title: "初投稿", authorId: 1 } }),
+]);
+
+// インタラクティブトランザクション
+await prisma.$transaction(async (tx) => {
+  const from = await tx.account.findUnique({ where: { id: fromId } });
+  if (from.balance < amount) throw new Error("残高不足");
+
+  await tx.account.update({ where: { id: fromId }, data: { balance: { decrement: amount } } });
+  await tx.account.update({ where: { id: toId },   data: { balance: { increment: amount } } });
+});
+```
+
+<Callout type="tip" title="Prismaと生SQLの使い分け">
+Prismaで複雑なクエリが書きにくい場合は`$queryRaw`で生SQLも使えます：
+
+```javascript
+const result = await prisma.$queryRaw`
+  SELECT u.name, COUNT(p.id) AS post_count
+  FROM users u
+  LEFT JOIN posts p ON p.author_id = u.id
+  GROUP BY u.id
+  ORDER BY post_count DESC
+  LIMIT 10
+`;
+```
+
+ORMと生SQLを適材適所で組み合わせるのがベストです。
+</Callout>
+
+## まとめ
+
+- ORMはJavaScriptネイティブのAPIでDBを操作できる
+- Prismaはスキーマ駆動で型安全なモダンORM
+- `schema.prisma`でモデルを定義してマイグレーションで反映
+- `findMany/create/update/delete`でCRUD操作
+- 複雑なクエリは`$queryRaw`で生SQLを使う

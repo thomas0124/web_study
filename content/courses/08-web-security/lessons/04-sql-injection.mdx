@@ -1,0 +1,123 @@
+---
+title: SQLインジェクション
+description: SQLインジェクション攻撃の仕組みとプリペアドステートメント・ORMによる完全な防御方法を学ぶ
+---
+
+## SQLインジェクションとは
+
+**SQLインジェクション**はユーザー入力をSQLクエリにそのまま組み込むことで、攻撃者が任意のSQLを実行できる脆弱性です。OWASPトップ10で長年1位を取り続けた最も危険な脆弱性のひとつです。
+
+## 攻撃例
+
+```javascript
+// 脆弱なコード（入力をそのまま連結）
+const userId = req.params.id; // "1 OR 1=1"
+const query = `SELECT * FROM users WHERE id = ${userId}`;
+// → SELECT * FROM users WHERE id = 1 OR 1=1
+// → 全ユーザーのデータが返される！
+```
+
+ログイン認証への攻撃：
+
+```javascript
+// 脆弱なコード
+const email = req.body.email;   // "admin@example.com' --"
+const password = req.body.password; // (なんでもいい)
+const query = `
+  SELECT * FROM users
+  WHERE email = '${email}' AND password = '${password}'
+`;
+// → WHERE email = 'admin@example.com' --' AND password = '...'
+// → "--"以降がコメントアウトされ、パスワードチェックをバイパス！
+```
+
+## 対策
+
+### 1. プリペアドステートメント（パラメータ化クエリ）
+
+**最も重要な対策**です。SQLとデータを分離してDBに送ります：
+
+```javascript
+import { Pool } from "pg";
+const pool = new Pool();
+
+// ❌ 脆弱（文字列連結）
+const result = await pool.query(
+  `SELECT * FROM users WHERE id = ${req.params.id}`
+);
+
+// ✅ 安全（パラメータ化）
+const result = await pool.query(
+  "SELECT * FROM users WHERE id = $1",
+  [req.params.id]
+);
+// $1はDBドライバが安全にエスケープする
+```
+
+SQLiteの場合：
+
+```javascript
+// ❌ 脆弱
+db.all(`SELECT * FROM users WHERE name = '${name}'`);
+
+// ✅ 安全
+db.all("SELECT * FROM users WHERE name = ?", [name]);
+```
+
+### 2. ORMを使う
+
+PrismaなどのORMはパラメータ化クエリを自動的に使います：
+
+```javascript
+// ✅ Prismaは自動的に安全
+const user = await prisma.user.findFirst({
+  where: { id: userId },
+});
+// → 内部的にプリペアドステートメントを使用
+```
+
+### 3. 最小権限
+
+DBユーザーに必要な権限だけを付与する：
+
+```sql
+-- アプリ用DBユーザーはDDL（DROP/ALTER）を実行できない
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_user;
+-- → SQLインジェクションされてもテーブルを削除できない
+```
+
+### 4. 入力バリデーション
+
+悪意のある入力を事前に弾く（防御の深さを増やす）：
+
+```javascript
+import { z } from "zod";
+
+const schema = z.object({
+  id: z.number().int().positive(),
+  email: z.string().email().max(255),
+  name: z.string().regex(/^[\p{L}\p{N}\s]+$/u).max(100),
+});
+```
+
+<Callout type="warning" title="ORMを使っても$queryRawは危険">
+Prismaでも`$queryRaw`テンプレートリテラルを使うと安全ですが、文字列として渡すと危険です：
+
+```javascript
+// ✅ 安全（テンプレートリテラル）
+await prisma.$queryRaw`SELECT * FROM users WHERE id = ${userId}`;
+
+// ❌ 危険（文字列結合）
+await prisma.$queryRawUnsafe(`SELECT * FROM users WHERE id = ${userId}`);
+```
+
+`$queryRawUnsafe`の名前にUnsafeとあるのは意図的です。使用は最小限にしましょう。
+</Callout>
+
+## まとめ
+
+- SQLインジェクションはユーザー入力をSQL文字列に連結することで発生
+- プリペアドステートメント（パラメータ化クエリ）が根本的な対策
+- ORMを使うと自動的に保護される
+- DBユーザーには最小権限を付与して被害を限定する
+- zodなどで入力バリデーションを多層防御として追加する

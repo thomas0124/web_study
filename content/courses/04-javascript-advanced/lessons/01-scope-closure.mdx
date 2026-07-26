@@ -1,0 +1,180 @@
+---
+title: スコープとクロージャ
+description: JavaScriptのスコープの仕組みとクロージャのパターンを深く理解する
+---
+
+## スコープの種類
+
+**スコープ**は変数が参照できる範囲のことです。JavaScriptには複数のスコープがあります。
+
+### グローバルスコープ
+
+ファイルの最上位で宣言された変数は、どこからでもアクセスできます。
+
+```javascript
+const appName = "MyApp"; // グローバルスコープ
+
+function init() {
+  console.log(appName); // アクセス可能
+}
+```
+
+### 関数スコープ
+
+関数の中で宣言した変数は、その関数の外からアクセスできません。
+
+```javascript
+function calculate() {
+  const result = 42; // 関数スコープ
+  return result;
+}
+console.log(result); // ReferenceError: result is not defined
+```
+
+### ブロックスコープ（`const`と`let`）
+
+`{}`（ブロック）の中で宣言した変数はブロックの外から見えません。
+
+```javascript
+if (true) {
+  const blockVar = "ブロック内";
+  let alsoBlock = "これも";
+  var hoisted = "varはブロックスコープを無視"; // 注意！
+}
+
+console.log(blockVar);  // ReferenceError
+console.log(alsoBlock); // ReferenceError
+console.log(hoisted);   // "varはブロックスコープを無視"（varは関数スコープ）
+```
+
+### スコープチェーン
+
+内側のスコープから外側のスコープへ変数を探す仕組みを**スコープチェーン**といいます。
+
+```javascript
+const x = 1;  // グローバル
+
+function outer() {
+  const x = 2;  // outerのローカル
+
+  function inner() {
+    const x = 3;  // innerのローカル
+    console.log(x); // 3（最も内側を優先）
+  }
+
+  function noLocal() {
+    console.log(x); // 2（外側のouterから取得）
+  }
+
+  inner();   // 3
+  noLocal(); // 2
+}
+
+outer();
+console.log(x); // 1
+```
+
+## ホイスティング
+
+変数・関数の**宣言**はスコープの先頭に移動（ホイスト）されます。ただし**初期化**は移動しません。
+
+```javascript
+console.log(x); // undefined（エラーにならない）
+var x = 5;
+
+// varと宣言された変数は↓のように解釈される
+var x;          // 宣言がホイスト
+console.log(x); // undefined
+x = 5;          // 初期化は元の位置
+
+// constとletはホイストされるが初期化前アクセスはエラー
+console.log(y); // ReferenceError: Cannot access 'y' before initialization
+const y = 5;
+```
+
+関数宣言はまるごとホイストされます：
+
+```javascript
+hello(); // "Hello!"（宣言前でも呼べる）
+
+function hello() {
+  console.log("Hello!");
+}
+```
+
+## クロージャ
+
+**クロージャ**は関数が定義された時のスコープ（レキシカル環境）を記憶し、外部から参照できなくなった後もその変数にアクセスできる仕組みです。
+
+```javascript
+function createCounter() {
+  let count = 0;  // この変数はcreateCounterのスコープ内
+
+  return {
+    increment() { count++; },
+    decrement() { count--; },
+    getCount()  { return count; },
+  };
+}
+
+const counter = createCounter();
+counter.increment();
+counter.increment();
+counter.increment();
+counter.decrement();
+console.log(counter.getCount()); // 2
+
+// countに外部から直接アクセスする方法はない（カプセル化）
+```
+
+### クロージャの実用例
+
+```javascript
+// 部分適用（カリー化）
+function multiply(factor) {
+  return (number) => number * factor;
+}
+const double = multiply(2);
+const triple = multiply(3);
+double(5); // 10
+triple(5); // 15
+
+// メモ化（計算結果のキャッシュ）
+function memoize(fn) {
+  const cache = new Map();
+  return function(...args) {
+    const key = JSON.stringify(args);
+    if (cache.has(key)) return cache.get(key);
+    const result = fn(...args);
+    cache.set(key, result);
+    return result;
+  };
+}
+
+const expensiveCalc = memoize((n) => n * n);
+expensiveCalc(5);  // 計算: 25
+expensiveCalc(5);  // キャッシュから: 25
+```
+
+<Callout type="info" title="クロージャとメモリ">
+クロージャは外部スコープの変数への参照を保持するため、その変数はガベージコレクションされません。大量のデータをクロージャで保持し続けるとメモリリークの原因になります。不要になったら参照を解放しましょう。
+</Callout>
+
+## IIFEパターン
+
+**IIFE（Immediately Invoked Function Expression）**は定義と同時に実行される関数式です。モジュールシステムが普及した現代では頻度が下がりましたが、スコープを分離するパターンとして理解しておく価値があります。
+
+```javascript
+(function() {
+  const localVar = "外から見えない";
+  console.log(localVar);
+})();
+```
+
+## まとめ
+
+- スコープは変数の可視範囲で、グローバル・関数・ブロックの3種類
+- `const`/`let`はブロックスコープ、`var`は関数スコープ（非推奨）
+- スコープチェーンで内側から外側へ変数を探す
+- クロージャは関数が定義時のスコープを記憶する仕組み
+- カウンター・部分適用・メモ化などの実用パターンに活用できる

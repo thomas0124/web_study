@@ -1,0 +1,160 @@
+---
+title: チーム開発のルール
+description: コーディング規約・コミットメッセージ・ブランチ戦略・ドキュメントなどチーム開発の慣習を学ぶ
+---
+
+## なぜルールが必要か
+
+チームで開発する場合、ルールがないと：
+- コードスタイルがバラバラで読みにくい
+- 誰がどのブランチで何を作っているか分からない
+- コミット履歴から変更の意図が読み取れない
+- ドキュメントが陳腐化して信頼できない
+
+## コーディング規約
+
+### ESLint + Prettierで自動化
+
+```javascript
+// .eslintrc.cjs
+module.exports = {
+  extends: [
+    "next/core-web-vitals",
+    "plugin:@typescript-eslint/recommended",
+  ],
+  rules: {
+    "@typescript-eslint/no-explicit-any": "error",
+    "prefer-const": "error",
+    "no-var": "error",
+  },
+};
+```
+
+```json
+// .prettierrc
+{
+  "semi": true,
+  "singleQuote": false,
+  "trailingComma": "all",
+  "printWidth": 100,
+  "tabWidth": 2
+}
+```
+
+Gitにコミットする前に自動フォーマット：
+
+```json
+// package.json
+{
+  "scripts": {
+    "format": "prettier --write .",
+    "lint:fix": "eslint . --fix"
+  }
+}
+```
+
+## Conventional Commits
+
+コミットメッセージに一定のフォーマットを採用する：
+
+```
+<type>(<scope>): <description>
+
+<body>
+
+<footer>
+```
+
+タイプ一覧：
+
+| type | 用途 |
+|------|------|
+| `feat` | 新機能の追加 |
+| `fix` | バグ修正 |
+| `docs` | ドキュメントの変更 |
+| `refactor` | リファクタリング（機能変更なし） |
+| `test` | テストの追加・修正 |
+| `chore` | ビルド・CI・依存関係の変更 |
+| `perf` | パフォーマンス改善 |
+| `ci` | CI設定の変更 |
+
+```bash
+# 良いコミットメッセージの例
+git commit -m 'feat(auth): add Google OAuth login'
+git commit -m 'fix(api): handle empty request body in POST /users'
+git commit -m 'docs: update API authentication section'
+git commit -m 'refactor: extract email validation to util function'
+```
+
+## ブランチ命名規則
+
+```bash
+# パターン: <type>/<short-description>
+feat/user-profile
+fix/login-redirect-loop
+docs/update-readme
+refactor/extract-auth-service
+chore/update-dependencies
+```
+
+## Definition of Done（完了の定義）
+
+PRをマージする前に確認するチェックリスト：
+
+```markdown
+## マージ前チェックリスト
+- [ ] 機能の動作を手動で確認した
+- [ ] ユニットテストを追加・更新した
+- [ ] TypeScriptの型エラーがない（pnpm tsc --noEmit）
+- [ ] リントエラーがない（pnpm eslint）
+- [ ] CIがグリーンになっている
+- [ ] 2名以上のApprovalを得た
+- [ ] コンフリクトを解消した
+- [ ] PRの説明が充実している（変更内容・テスト方法）
+```
+
+## ADR（Architecture Decision Record）
+
+重要なアーキテクチャ決定を記録する：
+
+```markdown
+# ADR-001: 認証にJWTを採用
+
+## 日付
+2026-07-26
+
+## 状態
+採択済み
+
+## コンテキスト
+ユーザー認証の実装方法を決定する必要がある。
+
+## 決定
+JWTをAuthorizationヘッダーで送信するアプローチを採用する。
+
+## 理由
+- SPAとの相性が良い
+- マイクロサービスへの移行を考慮してステートレスにしたい
+- セッションストレージのインフラが不要
+
+## 結果
+- アクセストークン: 15分
+- リフレッシュトークン: 7日
+- トークンをLocalStorageに保存するためXSS対策が必要
+```
+
+<Callout type="info" title="onboardingドキュメントを整備する">
+新メンバーが最初の1日でリポジトリをcloneして`pnpm dev`が起動できるよう、README.mdに以下を記載しておきましょう：
+- 前提条件（Node.jsのバージョンなど）
+- セットアップ手順（`.env`の設定など）
+- よく使うコマンド
+- アーキテクチャの概要
+</Callout>
+
+## まとめ
+
+- ESLint + Prettierでコードスタイルを自動統一する
+- Conventional Commitsでコミット履歴を分かりやすくする
+- ブランチ命名規則で何の作業か一目で分かるようにする
+- Definition of Doneでマージ基準を明確化する
+- ADRで重要なアーキテクチャ決定を記録する

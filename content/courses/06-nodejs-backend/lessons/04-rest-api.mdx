@@ -1,0 +1,155 @@
+---
+title: REST API設計
+description: RESTの原則に従ったAPIを設計し、実務で通用するエンドポイント設計を学ぶ
+---
+
+## RESTとは
+
+**REST（Representational State Transfer）**はWebサービスの設計原則です。2000年にRoy Fieldingが博士論文で提唱しました。RESTに従って設計されたAPIを**RESTful API**と呼びます。
+
+## RESTの6原則
+
+1. **クライアント・サーバー分離**: フロントとバックエンドが独立
+2. **ステートレス**: 各リクエストは完結している（サーバーはセッション状態を持たない）
+3. **キャッシュ可能**: レスポンスはキャッシュ可否を示す
+4. **統一インターフェース**: 一貫したURLとHTTPメソッドを使う
+5. **階層化システム**: 中間層（ロードバランサー等）を挿入できる
+6. **コードオンデマンド（オプション）**: サーバーが実行可能コードを返せる
+
+## URLの設計
+
+### リソース名は名詞・複数形を使う
+
+```
+# 良い例（名詞・複数形）
+GET    /users          ← ユーザー一覧
+GET    /users/123      ← ユーザー詳細
+POST   /users          ← ユーザー作成
+PATCH  /users/123      ← ユーザー更新
+DELETE /users/123      ← ユーザー削除
+
+# 悪い例（動詞を使っている）
+GET  /getUsers
+POST /createUser
+GET  /deleteUser?id=123
+```
+
+### ネストリソース
+
+```
+GET /users/123/posts        ← ユーザー123の投稿一覧
+POST /users/123/posts        ← ユーザー123に投稿を作成
+GET /users/123/posts/456     ← ユーザー123の投稿456
+```
+
+ネストは**2階層まで**が管理しやすいです。
+
+### クエリパラメータの用途
+
+```
+GET /posts?page=1&limit=10           ← ページネーション
+GET /posts?sort=createdAt&order=desc ← ソート
+GET /posts?category=tech&tag=react   ← フィルタリング
+GET /users?search=田中                ← 検索
+```
+
+## HTTPメソッドとCRUD
+
+| HTTPメソッド | CRUD操作 | 用途 | べき等性 |
+|------------|---------|------|---------|
+| GET | Read | 取得 | ✅（何度呼んでも同じ） |
+| POST | Create | 作成 | ❌（呼ぶたびに作成） |
+| PUT | Update | 全体更新 | ✅ |
+| PATCH | Update | 部分更新 | ❌ |
+| DELETE | Delete | 削除 | ✅ |
+
+## ステータスコード
+
+```javascript
+// 成功
+res.status(200).json(data);          // OK（取得・更新成功）
+res.status(201).json(created);       // Created（作成成功）
+res.status(204).send();              // No Content（削除成功）
+
+// クライアントエラー
+res.status(400).json({ error: "..." }); // Bad Request（入力エラー）
+res.status(401).json({ error: "..." }); // Unauthorized（未認証）
+res.status(403).json({ error: "..." }); // Forbidden（権限なし）
+res.status(404).json({ error: "..." }); // Not Found
+res.status(409).json({ error: "..." }); // Conflict（重複など）
+res.status(422).json({ error: "..." }); // Unprocessable Entity（バリデーション失敗）
+
+// サーバーエラー
+res.status(500).json({ error: "..." }); // Internal Server Error
+res.status(503).json({ error: "..." }); // Service Unavailable
+```
+
+## レスポンスの形式
+
+一貫したレスポンス形式を決めておくと、フロントエンドの処理が楽になります：
+
+```json
+// 成功レスポンス
+{
+  "data": { "id": 1, "name": "田中" },
+  "meta": { "total": 100, "page": 1 }
+}
+
+// エラーレスポンス
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "入力値が不正です",
+    "details": [
+      { "field": "email", "message": "メールアドレスの形式が正しくありません" }
+    ]
+  }
+}
+```
+
+## バリデーション
+
+```javascript
+import { z } from "zod";
+
+const createUserSchema = z.object({
+  name: z.string().min(1).max(50),
+  email: z.string().email(),
+  age: z.number().int().min(0).max(150).optional(),
+});
+
+app.post("/users", (req, res) => {
+  const result = createUserSchema.safeParse(req.body);
+
+  if (!result.success) {
+    return res.status(422).json({
+      error: {
+        code: "VALIDATION_ERROR",
+        details: result.error.issues,
+      },
+    });
+  }
+
+  const { name, email, age } = result.data;
+  // バリデーション済みデータで処理...
+});
+```
+
+<Callout type="tip" title="APIバージョニング">
+APIが変わる可能性がある場合、URLにバージョンを含めておくと後方互換性を保てます：
+
+```
+/api/v1/users
+/api/v2/users
+```
+
+将来のバージョンと並行稼働できるため、クライアントの移行期間を設けられます。
+</Callout>
+
+## まとめ
+
+- URLは名詞・複数形でリソースを表す
+- HTTPメソッドでCRUD操作を表現する
+- 適切なステータスコードを返す
+- 一貫したレスポンス形式を定義する
+- zodなどでバリデーションして422を返す

@@ -1,0 +1,133 @@
+---
+title: Gitとバージョン管理
+description: Gitの基本概念（コミット・ブランチ・マージ）と日常的なワークフローを習得する
+---
+
+## Gitとは
+
+**Git**はソースコードの変更履歴を管理する**分散型バージョン管理システム**です。Linus Torvalds（Linuxの作者）が2005年に開発しました。
+
+- 変更履歴をいつでも見返せる
+- 過去のバージョンに戻れる
+- 複数人で同じコードを編集できる
+- 誰が何をいつ変更したか分かる
+
+## 基本コマンド
+
+```bash
+# リポジトリを初期化
+git init
+
+# 状態確認
+git status
+
+# ファイルをステージング
+git add file.ts        # 特定ファイル
+git add src/           # ディレクトリ
+git add -p             # 変更を対話的に選択（推奨）
+
+# コミット
+git commit -m "feat: add user authentication"
+
+# 変更内容の確認
+git diff               # 未ステージの変更
+git diff --staged      # ステージ済みの変更
+
+# ログの確認
+git log --oneline
+git log --oneline --graph  # ブランチを視覚化
+```
+
+## ブランチ
+
+```bash
+# ブランチ一覧
+git branch
+
+# ブランチ作成と切り替え
+git checkout -b feat/add-login
+git switch -c feat/add-login  # 新しい書き方
+
+# ブランチ切り替え
+git checkout main
+git switch main
+
+# ブランチ削除
+git branch -d feat/add-login      # マージ済みなら削除
+git branch -D feat/add-login      # 強制削除（注意）
+```
+
+## マージとリベース
+
+```bash
+# マージ（mainにfeat/add-loginをマージ）
+git checkout main
+git merge feat/add-login
+
+# リベース（feat/add-loginのコミットをmainの先頭に移動）
+git checkout feat/add-login
+git rebase main
+```
+
+マージvsリベース：
+
+| | マージ | リベース |
+|-|-------|---------|
+| 履歴 | 分岐が残る | 直線になる |
+| コンフリクト | 一度のみ | コミットごとに発生 |
+| 用途 | チーム開発 | ローカル整理 |
+
+## コンフリクトの解決
+
+```bash
+# コンフリクトが発生したファイル
+git status  # "both modified" が表示される
+
+# ファイルを開くとコンフリクトマーカーが入っている
+<<<<<<< HEAD
+const greeting = "こんにちは";
+=======
+const greeting = "Hello";
+>>>>>>> feat/add-greeting
+
+# 手動で解決（どちらか or 組み合わせ）
+const greeting = "こんにちは（Hello）";
+
+# 解決後
+git add file.ts
+git commit  # マージコミットが作成される
+```
+
+## .gitignore
+
+```gitignore
+# 依存関係
+node_modules/
+
+# ビルド成果物
+dist/
+.next/
+out/
+
+# 環境変数（機密情報）
+.env
+.env.local
+.env.*.local
+
+# OS・エディタのファイル
+.DS_Store
+.vscode/settings.json
+*.swp
+```
+
+<Callout type="tip" title="atomic commitを心がける">
+1つのコミットには**1つの目的**だけを含めましょう。「ログインを実装してついでにフォームもリファクタした」ではなく、2つのコミットに分けます。こうすると特定のコミットだけを`git revert`でrollbackできます。
+</Callout>
+
+## まとめ
+
+- Gitは変更履歴を管理し、チーム開発と過去への復元を可能にする
+- `add` → `commit` → `push` が基本フロー
+- ブランチで作業を分離してメインに影響しない
+- コンフリクトはコンフリクトマーカーを手動で解消する
+- `.gitignore`で機密情報・ビルド成果物を除外する

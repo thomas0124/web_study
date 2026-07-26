@@ -1,0 +1,159 @@
+---
+title: イベント処理
+description: クリック・入力・キーボードなどのイベントをJavaScriptで扱う方法を学ぶ
+---
+
+## イベントとは
+
+ユーザーのアクション（クリック・入力・スクロールなど）やブラウザの状態変化（ページ読み込み完了など）を**イベント**といいます。イベントリスナーを登録することで、これらに反応する処理を実行できます。
+
+## addEventListener
+
+```javascript
+const button = document.querySelector("button");
+
+// addEventListener(イベント名, コールバック関数)
+button.addEventListener("click", (event) => {
+  console.log("クリックされました！");
+  console.log(event); // イベントオブジェクト
+});
+```
+
+## よく使うイベント
+
+### マウスイベント
+
+```javascript
+el.addEventListener("click", handler);       // クリック
+el.addEventListener("dblclick", handler);    // ダブルクリック
+el.addEventListener("mouseenter", handler);  // マウス侵入
+el.addEventListener("mouseleave", handler);  // マウス退出
+el.addEventListener("mousemove", handler);   // マウス移動
+```
+
+### フォームイベント
+
+```javascript
+input.addEventListener("input", (e) => {
+  console.log(e.target.value); // 入力中の値
+});
+
+input.addEventListener("change", handler);  // 値が変わって離れた時
+input.addEventListener("focus", handler);   // フォーカス時
+input.addEventListener("blur", handler);    // フォーカスを失った時
+
+form.addEventListener("submit", (e) => {
+  e.preventDefault(); // デフォルト送信をキャンセル
+  // フォームデータを処理
+});
+```
+
+### キーボードイベント
+
+```javascript
+document.addEventListener("keydown", (e) => {
+  console.log(e.key);     // "Enter", "a", "ArrowUp" など
+  console.log(e.code);    // "Enter", "KeyA", "ArrowUp"
+  console.log(e.ctrlKey); // Ctrlが押されているか
+  console.log(e.shiftKey);
+  console.log(e.metaKey); // Cmd（Mac）
+
+  if (e.key === "Enter") {
+    // Enterキーが押された時の処理
+  }
+  if (e.ctrlKey && e.key === "s") {
+    e.preventDefault(); // ブラウザの保存を防ぐ
+    // 独自の保存処理
+  }
+});
+```
+
+### ウィンドウ・ページイベント
+
+```javascript
+window.addEventListener("load", () => {
+  // ページ全体（画像含む）の読み込み完了
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  // HTMLのパース完了（画像は未読み込み）
+});
+
+window.addEventListener("resize", () => {
+  console.log(window.innerWidth, window.innerHeight);
+});
+
+window.addEventListener("scroll", () => {
+  console.log(window.scrollY);
+});
+```
+
+## イベントオブジェクト
+
+イベントコールバックの引数にはイベントオブジェクトが渡されます。
+
+```javascript
+button.addEventListener("click", (e) => {
+  e.target          // イベントが発生した要素
+  e.currentTarget   // リスナーが登録された要素
+  e.type            // イベントの種類（"click"など）
+  e.preventDefault()  // デフォルト動作をキャンセル
+  e.stopPropagation() // バブリングを停止
+});
+```
+
+## イベントバブリング
+
+クリックなどのイベントは子要素から親要素へと**バブリング（伝播）**します。
+
+```html
+<div id="parent">
+  <button id="child">クリック</button>
+</div>
+```
+
+```javascript
+document.getElementById("child").addEventListener("click", () => {
+  console.log("1. childのハンドラ");
+});
+document.getElementById("parent").addEventListener("click", () => {
+  console.log("2. parentのハンドラ");
+});
+// ボタンをクリックすると両方のハンドラが実行される
+```
+
+## イベント委任（Event Delegation）
+
+```javascript
+// 悪い例: 各アイテムにリスナーを登録
+document.querySelectorAll(".item").forEach(item => {
+  item.addEventListener("click", handler);
+});
+
+// 良い例: 親要素に1つだけ登録
+document.querySelector(".list").addEventListener("click", (e) => {
+  if (e.target.matches(".item")) {
+    console.log("アイテムがクリックされた:", e.target.textContent);
+  }
+});
+```
+
+イベント委任により、動的に追加された要素にも自動的に対応でき、メモリ効率も向上します。
+
+<Callout type="tip" title="removeEventListenerでクリーンアップ">
+コンポーネントが不要になったとき、登録したリスナーを削除しないとメモリリークの原因になります。
+
+```javascript
+const handler = () => console.log("クリック");
+button.addEventListener("click", handler);
+// 不要になったら削除
+button.removeEventListener("click", handler);
+```
+</Callout>
+
+## まとめ
+
+- `addEventListener`でイベントを登録する
+- `e.preventDefault()`でデフォルト動作をキャンセルできる
+- イベントはバブリングで親要素へ伝播する
+- イベント委任で効率的にイベントを管理できる

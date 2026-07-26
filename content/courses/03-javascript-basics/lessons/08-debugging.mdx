@@ -1,0 +1,147 @@
+---
+title: デバッグ技術
+description: console APIとブラウザのデバッガーを使ったJavaScriptのデバッグ方法を学ぶ
+---
+
+## デバッグとは
+
+**デバッグ**とはバグ（不具合）を発見・修正するプロセスです。プログラミングの時間の多くがデバッグに費やされます。効率的なデバッグ技術を身につけることで生産性が大幅に向上します。
+
+## console APIを使いこなす
+
+`console.log`だけでなく、目的に応じたAPIを使いましょう。
+
+```javascript
+// 基本的な出力
+console.log("通常のメッセージ");
+console.info("情報");
+console.warn("警告");  // 黄色で表示
+console.error("エラー"); // 赤色で表示
+
+// オブジェクトの詳細表示
+const user = { name: "田中", scores: [85, 92, 78] };
+console.log(user);         // オブジェクトとして表示
+console.table([user]);     // テーブル形式で表示
+console.dir(user);         // プロパティツリーで表示
+
+// グループ化
+console.group("ユーザー情報");
+console.log("名前:", user.name);
+console.log("スコア:", user.scores);
+console.groupEnd();
+
+// 計測
+console.time("処理時間");
+// 処理...
+console.timeEnd("処理時間"); // "処理時間: 3.141ms"
+
+// カウント
+for (let i = 0; i < 3; i++) {
+  console.count("ループ回数"); // "ループ回数: 1, 2, 3"
+}
+
+// スタックトレース
+console.trace("どこから呼ばれた？");
+
+// アサーション（条件が偽の時だけエラー表示）
+console.assert(user.name === "鈴木", "名前が違う！", user);
+```
+
+## ブレークポイントを使ったデバッグ
+
+### DevToolsでのブレークポイント
+
+1. DevToolsを開く（F12）
+2. Sourcesパネルを選択
+3. JavaScriptファイルを選択
+4. 行番号をクリックしてブレークポイントを設定
+5. ページを操作してその行に達したら実行が停止する
+
+停止中に使えるボタン：
+- ▶️ **Continue**: 次のブレークポイントまで実行再開
+- ⤵ **Step over**: 次の行へ（関数の中には入らない）
+- ⤦ **Step into**: 関数の中に入る
+- ⤤ **Step out**: 現在の関数から出る
+
+### debuggerステートメント
+
+コードに`debugger;`と書くとDevToolsが開いている場合にそこで停止します：
+
+```javascript
+function calculateDiscount(price, rate) {
+  debugger; // ここで停止（DevToolsが開いている場合）
+  const discount = price * rate;
+  return price - discount;
+}
+```
+
+<Callout type="tip" title="本番環境のdebuggerに注意">
+`debugger;`文は本番コードに残さないようにしましょう。ESLintの`no-debugger`ルールで検出できます。
+</Callout>
+
+## 条件付きブレークポイント
+
+ループ内など特定の条件のときだけ止めたい場合、DevToolsで行番号を右クリックして「Add conditional breakpoint」を選択します：
+
+```
+i === 50  // i が 50 の時だけ停止
+```
+
+## よくあるバグのパターンと対処法
+
+### 参照エラー（ReferenceError）
+
+```javascript
+// エラー: Cannot access 'user' before initialization
+const greeting = `Hello, ${user}`; // userより前に使用
+const user = "田中";
+
+// 修正: 宣言を先に移動
+const user = "田中";
+const greeting = `Hello, ${user}`;
+```
+
+### typeエラー（TypeError）
+
+```javascript
+// エラー: Cannot read properties of undefined
+const data = undefined;
+console.log(data.name); // エラー
+
+// 修正: オプショナルチェーンで安全にアクセス
+console.log(data?.name); // undefined（エラーにならない）
+```
+
+### 非同期のタイミング問題
+
+```javascript
+// バグ: 非同期の結果を同期的に使おうとしている
+function getData() {
+  let result;
+  fetch("/api").then(res => res.json()).then(data => {
+    result = data;
+  });
+  return result; // undefined が返る！
+}
+
+// 修正: async/awaitで非同期を同期的に書く
+async function getData() {
+  const res = await fetch("/api");
+  return res.json();
+}
+```
+
+## ネットワークのデバッグ
+
+DevToolsのNetworkパネルで：
+- APIリクエストの送受信内容を確認
+- ステータスコードでエラーを特定
+- レスポンスタイムを確認
+- Throttlingで通信速度を遅くしてテスト
+
+## まとめ
+
+- `console.table`・`console.group`・`console.time`など用途に応じたAPIを使う
+- ブレークポイントで実行を停止して変数の状態を確認する
+- `debugger;`文でコードから直接停止点を設定できる
+- TypeError・ReferenceError・非同期タイミング問題がよくあるバグの原因

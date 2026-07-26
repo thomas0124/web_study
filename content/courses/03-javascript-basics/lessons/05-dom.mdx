@@ -1,0 +1,148 @@
+---
+title: DOM操作
+description: JavaScriptからHTML要素を取得・変更・追加・削除するDOM操作を学ぶ
+---
+
+## DOMとは
+
+**DOM（Document Object Model）**はHTMLをJavaScriptから操作するためのインターフェースです。ブラウザはHTMLを読み込むと、要素をツリー状のオブジェクトに変換します。JavaScriptはこのオブジェクトを通じてページの内容を動的に変更できます。
+
+## 要素の取得
+
+```javascript
+// IDで取得（1つ）
+const btn = document.getElementById("submit-btn");
+
+// セレクタで取得（最初の1つ）
+const title = document.querySelector("h1");
+const first = document.querySelector(".card:first-child");
+
+// セレクタで取得（すべて）
+const items = document.querySelectorAll(".list-item");
+// NodeListが返る → Array.from()で配列に変換できる
+
+// タグ名・クラス名での取得（古い方法）
+document.getElementsByTagName("p");
+document.getElementsByClassName("card");
+```
+
+## 要素の内容を変更
+
+```javascript
+const title = document.querySelector("h1");
+
+// テキストコンテンツ（XSS安全）
+title.textContent = "新しいタイトル";
+console.log(title.textContent); // テキストのみ取得
+
+// HTML（XSS注意！）
+title.innerHTML = "<strong>太字の</strong>タイトル";
+
+// フォームの値
+const input = document.querySelector("input");
+input.value = "初期値";
+console.log(input.value);
+```
+
+<Callout type="warning" title="innerHTMLとXSS">
+`innerHTML`にユーザー入力をそのまま入れるとXSS（クロスサイトスクリプティング）攻撃の原因になります。ユーザー入力を表示する場合は必ず`textContent`を使いましょう。
+</Callout>
+
+## 属性の操作
+
+```javascript
+const img = document.querySelector("img");
+
+// 属性の取得・設定
+img.getAttribute("alt");          // "説明テキスト"
+img.setAttribute("alt", "新しい説明");
+img.removeAttribute("alt");
+
+// よく使う属性はプロパティとして直接アクセス可能
+img.src = "new-image.jpg";
+img.alt = "説明";
+
+const link = document.querySelector("a");
+link.href = "https://example.com";
+link.target = "_blank";
+
+const input = document.querySelector("input");
+input.disabled = true;
+input.required = true;
+```
+
+## クラスの操作
+
+```javascript
+const card = document.querySelector(".card");
+
+// クラスの追加・削除・切り替え
+card.classList.add("active");
+card.classList.remove("hidden");
+card.classList.toggle("selected"); // あれば削除、なければ追加
+card.classList.replace("old-class", "new-class");
+
+// クラスの存在確認
+card.classList.contains("active"); // true/false
+```
+
+## スタイルの操作
+
+```javascript
+const box = document.querySelector(".box");
+
+// インラインスタイルを設定（キャメルケース）
+box.style.backgroundColor = "#3b82f6";
+box.style.fontSize = "1.5rem";
+box.style.display = "none";
+
+// 計算済みスタイルを取得
+const computed = getComputedStyle(box);
+computed.getPropertyValue("background-color");
+```
+
+## 要素の作成・追加・削除
+
+```javascript
+// 要素を作成
+const newItem = document.createElement("li");
+newItem.textContent = "新しいアイテム";
+newItem.classList.add("list-item");
+
+// 親要素に追加
+const list = document.querySelector("ul");
+list.appendChild(newItem);          // 末尾に追加
+list.prepend(newItem);              // 先頭に追加
+list.insertBefore(newItem, list.firstChild); // 指定要素の前に
+
+// insertAdjacentHTMLで位置指定して追加
+list.insertAdjacentHTML("beforeend", "<li>末尾</li>");
+
+// 要素の削除
+newItem.remove();                    // 自分自身を削除
+list.removeChild(list.firstChild);   // 子要素を削除
+```
+
+## DOM探索
+
+```javascript
+const el = document.querySelector(".card");
+
+// 親・子・兄弟
+el.parentElement          // 親要素
+el.children               // 子要素のHTMLCollection
+el.firstElementChild      // 最初の子要素
+el.lastElementChild       // 最後の子要素
+el.nextElementSibling     // 次の兄弟要素
+el.previousElementSibling // 前の兄弟要素
+
+// 特定のセレクタに合う祖先要素を探す
+el.closest(".container")
+```
+
+## まとめ
+
+- `querySelector`/`querySelectorAll`でCSS-like な要素取得
+- `textContent`はXSS安全、`innerHTML`は信頼できる文字列のみ
+- `classList.add/remove/toggle`でクラスを操作する
+- `createElement`と`appendChild`で動的に要素を追加できる

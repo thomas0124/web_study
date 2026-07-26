@@ -1,0 +1,158 @@
+---
+title: 認証セキュリティ
+description: パスワードポリシー・多要素認証・セッション管理など、認証に関するセキュリティベストプラクティスを学ぶ
+---
+
+## 認証のよくある脆弱性
+
+| 脆弱性 | 説明 | 対策 |
+|-------|------|------|
+| 弱いパスワード | 簡単に推測・ブルートフォース可能 | 強度チェック・レートリミット |
+| パスワード平文保存 | DB漏洩でパスワード流出 | bcryptでハッシュ化 |
+| セッション固定 | ログイン前後で同じセッションID | ログイン時にセッション再生成 |
+| セッションハイジャック | 盗まれたセッションIDで成りすまし | HttpOnly・Secure・SameSite |
+| 無制限なログイン試行 | ブルートフォース攻撃 | レートリミット・アカウントロック |
+
+## パスワードセキュリティ
+
+```javascript
+import bcrypt from "bcrypt";
+import { z } from "zod";
+
+// パスワード強度チェック
+const passwordSchema = z.string()
+  .min(8, "8文字以上")
+  .regex(/[A-Z]/, "大文字を含む")
+  .regex(/[a-z]/, "小文字を含む")
+  .regex(/[0-9]/, "数字を含む")
+  .regex(/[^A-Za-z0-9]/, "記号を含む");
+
+// ハッシュ化（コスト係数12推奨）
+const hash = await bcrypt.hash(password, 12);
+
+// 比較（タイミング攻撃対策のため必ずbcrypt.compareを使う）
+const isValid = await bcrypt.compare(inputPassword, storedHash);
+```
+
+## アカウントロックとレートリミット
+
+```javascript
+const loginAttempts = new Map(); // 本番ではRedisを使う
+
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+  const key = `login:${email}`;
+  const attempts = loginAttempts.get(key) || 0;
+
+  if (attempts >= 5) {
+    return res.status(429).json({
+      error: "ログイン試行回数が多すぎます。30分後に再試行してください",
+    });
+  }
+
+  const user = await findUserByEmail(email);
+  const isValid = user && await bcrypt.compare(password, user.password);
+
+  if (!isValid) {
+    loginAttempts.set(key, attempts + 1);
+    // 30分後にロック解除
+    setTimeout(() => loginAttempts.delete(key), 30 * 60 * 1000);
+    return res.status(401).json({ error: "メールアドレスまたはパスワードが正しくありません" });
+  }
+
+  loginAttempts.delete(key);
+  // ログイン成功処理...
+});
+```
+
+## セッション管理
+
+```javascript
+import session from "express-session";
+
+app.use(session({
+  secret: process.env.SESSION_SECRET, // 強力なランダム値
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 24 * 60 * 60 * 1000, // 24時間
+  },
+}));
+
+// ログイン時にセッションIDを再生成（セッション固定攻撃対策）
+app.post("/login", async (req, res) => {
+  const user = await authenticate(req.body);
+
+  req.session.regenerate((err) => { // 重要！
+    if (err) return next(err);
+    req.session.userId = user.id;
+    res.json({ success: true });
+  });
+});
+
+// ログアウト時にセッションを破棄
+app.post("/logout", (req, res) => {
+  req.session.destroy((err) => {
+    res.clearCookie("connect.sid");
+    res.json({ success: true });
+  });
+});
+```
+
+## 多要素認証（MFA）
+
+TOTPベースのMFA（Google AuthenticatorなどのアプリのコードをTOTPと呼ぶ）：
+
+```javascript
+import speakeasy from "speakeasy";
+import qrcode from "qrcode";
+
+// MFA設定
+app.post("/mfa/setup", authenticate, async (req, res) => {
+  const secret = speakeasy.generateSecret({ name: "MyApp" });
+
+  await db.users.update({
+    where: { id: req.user.id },
+    data: { mfaSecret: secret.base32, mfaEnabled: false },
+  });
+
+  const qrUrl = await qrcode.toDataURL(secret.otpauth_url);
+  res.json({ qrCode: qrUrl, secret: secret.base32 });
+});
+
+// MFA検証
+app.post("/mfa/verify", authenticate, async (req, res) => {
+  const user = await db.users.findUnique({ where: { id: req.user.id } });
+
+  const verified = speakeasy.totp.verify({
+    secret: user.mfaSecret,
+    encoding: "base32",
+    token: req.body.code,
+    window: 1, // 前後1ステップの誤差を許容
+  });
+
+  if (!verified) return res.status(401).json({ error: "コードが無効" });
+
+  await db.users.update({ where: { id: req.user.id }, data: { mfaEnabled: true } });
+  res.json({ success: true });
+});
+```
+
+<Callout type="tip" title="パスワードリセット機能のセキュリティ">
+パスワードリセットは攻撃者の標的になりやすいです：
+- トークンは暗号論的乱数で生成（`crypto.randomBytes`）
+- 有効期限を短くする（15〜30分）
+- 使用後はすぐに無効化
+- 存在しないメールアドレスでも同じメッセージを返す（ユーザー存在を確認させない）
+</Callout>
+
+## まとめ
+
+- パスワードはbcryptでコスト係数12以上でハッシュ化
+- ログイン失敗時はレートリミットとアカウントロックで保護
+- ログイン時にセッションIDを再生成してセッション固定攻撃を防ぐ
+- CookieはHttpOnly・Secure・SameSiteを設定
+- 重要なシステムにはMFAを実装する

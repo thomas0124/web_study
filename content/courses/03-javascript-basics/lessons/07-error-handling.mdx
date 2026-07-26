@@ -1,0 +1,155 @@
+---
+title: エラーハンドリング
+description: try/catch/finally構文とエラーオブジェクトを使ったJavaScriptの例外処理を学ぶ
+---
+
+## なぜエラーハンドリングが必要か
+
+プログラムは予期しないエラーが起きることがあります。ネットワークが切れた、ユーザーが不正なデータを入力した、外部APIが落ちているなど。エラーハンドリングなしでは、これらのエラーがページのクラッシュや不正な状態につながります。
+
+## try/catch/finally
+
+```javascript
+try {
+  // エラーが起きる可能性のある処理
+  const data = JSON.parse("invalid json");
+} catch (error) {
+  // エラーが発生した時の処理
+  console.error("JSONのパースに失敗:", error.message);
+} finally {
+  // 必ず実行される処理（成功・失敗に関わらず）
+  console.log("処理完了");
+}
+```
+
+## エラーオブジェクト
+
+```javascript
+try {
+  null.property; // TypeError
+} catch (e) {
+  e.name;    // "TypeError"
+  e.message; // "Cannot read properties of null"
+  e.stack;   // スタックトレース
+}
+```
+
+### エラーの種類
+
+| エラー | 原因 |
+|--------|------|
+| `TypeError` | 型が不正（null.foo など） |
+| `ReferenceError` | 存在しない変数を参照 |
+| `SyntaxError` | 構文エラー（JSON.parse 失敗など） |
+| `RangeError` | 範囲外の値（配列の長さに負の数など） |
+| `NetworkError` | ネットワーク通信エラー |
+
+## カスタムエラー
+
+```javascript
+class ValidationError extends Error {
+  constructor(field, message) {
+    super(message);
+    this.name = "ValidationError";
+    this.field = field;
+  }
+}
+
+function validateAge(age) {
+  if (typeof age !== "number") {
+    throw new ValidationError("age", "年齢は数値で入力してください");
+  }
+  if (age < 0 || age > 150) {
+    throw new ValidationError("age", "年齢は0〜150の範囲で入力してください");
+  }
+  return true;
+}
+
+try {
+  validateAge(-1);
+} catch (e) {
+  if (e instanceof ValidationError) {
+    console.error(`バリデーションエラー(${e.field}): ${e.message}`);
+  } else {
+    throw e; // 想定外のエラーは再スロー
+  }
+}
+```
+
+## 非同期処理のエラーハンドリング
+
+### Promiseのエラー
+
+```javascript
+fetch("/api/data")
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`HTTP error: ${response.status}`);
+    }
+    return response.json();
+  })
+  .then(data => console.log(data))
+  .catch(error => console.error("取得失敗:", error))
+  .finally(() => console.log("リクエスト完了"));
+```
+
+### async/awaitのエラー
+
+```javascript
+async function fetchData(url) {
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("データ取得エラー:", error);
+    return null; // エラー時のフォールバック値
+  }
+}
+```
+
+## グローバルエラーハンドリング
+
+```javascript
+// 未処理のエラーをキャッチ
+window.addEventListener("error", (event) => {
+  console.error("未処理エラー:", event.error);
+  // エラー監視サービスに送信するなど
+});
+
+// 未処理のPromise rejectionをキャッチ
+window.addEventListener("unhandledrejection", (event) => {
+  console.error("未処理のPromise rejection:", event.reason);
+  event.preventDefault(); // デフォルトのコンソール出力を抑制
+});
+```
+
+<Callout type="warning" title="エラーを黙って飲み込まない">
+空のcatchブロックや`console.log`だけのエラー処理は問題の診断を困難にします。少なくともエラーをログに記録し、可能であればユーザーにフィードバックしましょう。
+
+```javascript
+// 悪い例
+try { doSomething(); } catch (e) {} // エラーを無視
+
+// 良い例
+try {
+  doSomething();
+} catch (e) {
+  console.error("doSomethingに失敗:", e);
+  showUserMessage("処理に失敗しました。もう一度お試しください。");
+}
+```
+</Callout>
+
+## まとめ
+
+- `try/catch/finally`でエラーを捕捉して適切に処理する
+- カスタムエラークラスで詳細なエラー情報を持てる
+- `instanceof`でエラーの種類を判定して分岐処理できる
+- 非同期処理では`.catch()`またはtry/catchの両方が使える
+- エラーを黙って飲み込まず、必ずログを残す

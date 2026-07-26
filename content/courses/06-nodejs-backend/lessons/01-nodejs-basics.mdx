@@ -1,0 +1,139 @@
+---
+title: Node.js基礎
+description: Node.jsとは何か、ブラウザのJavaScriptとの違い、基本的なAPI（fs・path・process）を学ぶ
+---
+
+## Node.jsとは
+
+**Node.js**はブラウザ外でJavaScriptを実行できる**ランタイム環境**です。ChromeのV8エンジンをベースに、ファイルシステム・ネットワーク・プロセス管理などのAPIが追加されています。
+
+2009年にRyan Dahlが開発し、JavaScriptをサーバーサイドでも使えるようにしました。
+
+## ブラウザのJSとNode.jsの違い
+
+| 機能 | ブラウザ | Node.js |
+|------|---------|---------|
+| グローバルオブジェクト | `window` | `global` / `globalThis` |
+| DOM操作 | ✅ | ❌ |
+| ファイルシステム | ❌ | ✅（`fs`モジュール） |
+| ネットワーク | fetch | fetch + `net`モジュール |
+| プロセス管理 | ❌ | ✅（`process`オブジェクト） |
+| モジュール | ESModules | ESModules + CommonJS |
+
+## 最初のNode.jsスクリプト
+
+```javascript
+// hello.js
+console.log("Hello, Node.js!");
+console.log("Node.jsバージョン:", process.version);
+console.log("実行ディレクトリ:", process.cwd());
+```
+
+```bash
+node hello.js
+# Hello, Node.js!
+# Node.jsバージョン: v20.x.x
+```
+
+## processオブジェクト
+
+```javascript
+// コマンドライン引数
+// node script.js arg1 arg2
+console.log(process.argv);    // ['node', 'script.js', 'arg1', 'arg2']
+const args = process.argv.slice(2); // ['arg1', 'arg2']
+
+// 環境変数
+const port = process.env.PORT || 3000;
+const nodeEnv = process.env.NODE_ENV || "development";
+
+// プロセスの終了
+process.exit(0);  // 正常終了
+process.exit(1);  // 異常終了
+
+// プロセスイベント
+process.on("exit", (code) => {
+  console.log(`プロセス終了: ${code}`);
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("未処理の例外:", err);
+  process.exit(1);
+});
+```
+
+## ファイルシステム（fsモジュール）
+
+```javascript
+import { readFile, writeFile, appendFile, unlink } from "fs/promises";
+import { existsSync } from "fs";
+
+// ファイルを読む
+const content = await readFile("data.txt", "utf-8");
+console.log(content);
+
+// ファイルを書く
+await writeFile("output.txt", "Hello, File!", "utf-8");
+
+// ファイルに追記
+await appendFile("log.txt", `[${new Date().toISOString()}] アクセス\n`);
+
+// ファイルを削除
+await unlink("temp.txt");
+
+// ファイルの存在確認
+if (existsSync("config.json")) {
+  // 存在する場合の処理
+}
+```
+
+## パス操作（pathモジュール）
+
+```javascript
+import path from "path";
+
+// パスの結合（OS依存の区切り文字を自動判定）
+const filePath = path.join("user", "docs", "file.txt");
+// Linux: "user/docs/file.txt"
+// Windows: "user\docs\file.txt"
+
+// 絶対パスに変換
+const absolute = path.resolve("./config.json");
+// /Users/user/project/config.json
+
+// パスの各部分を取得
+path.basename("/home/user/file.txt");  // "file.txt"
+path.dirname("/home/user/file.txt");   // "/home/user"
+path.extname("/home/user/file.txt");   // ".txt"
+
+// __dirname (ESModulesでの書き方)
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+```
+
+## HTTPサーバーの作成（組み込みhttpモジュール）
+
+```javascript
+import { createServer } from "http";
+
+const server = createServer((req, res) => {
+  res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
+  res.end("Hello, Node.js Server!");
+});
+
+server.listen(3000, () => {
+  console.log("サーバー起動: http://localhost:3000");
+});
+```
+
+<Callout type="info" title="実務ではExpressを使う">
+組み込みの`http`モジュールは低レベルです。実務ではルーティング・ミドルウェア・バリデーションなどが整備されたExpressやFastifyを使います。次のレッスンで学びます。
+</Callout>
+
+## まとめ
+
+- Node.jsはサーバーサイドでJavaScriptを実行できるランタイム
+- `process`でコマンドライン引数・環境変数・プロセス管理ができる
+- `fs/promises`でファイルの読み書きができる
+- `path`でOSに依存しないパス操作ができる

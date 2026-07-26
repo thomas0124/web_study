@@ -1,0 +1,126 @@
+---
+title: インデックスとパフォーマンス
+description: インデックスの仕組みを理解し、クエリのパフォーマンスを改善する方法を学ぶ
+---
+
+## インデックスとは
+
+**インデックス（索引）**はテーブルの特定カラムに作成する検索補助データ構造です。本の索引と同じように、特定の値を素早く見つけられるようにします。
+
+インデックスがない場合：テーブル全行をスキャン（Full Table Scan）
+インデックスがある場合：インデックスを使って高速に検索
+
+## インデックスの作成
+
+```sql
+-- シングルカラムインデックス
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_posts_user_id ON posts(user_id);
+
+-- 複合インデックス（複数カラムの組み合わせ検索）
+CREATE INDEX idx_posts_user_status ON posts(user_id, status);
+
+-- ユニークインデックス（値の一意性を保証）
+CREATE UNIQUE INDEX idx_users_email ON users(email);
+
+-- 部分インデックス（特定条件の行のみ）
+CREATE INDEX idx_active_users ON users(created_at)
+WHERE deleted_at IS NULL;
+
+-- インデックスの確認
+\d users  -- PostgreSQLでテーブル情報表示
+```
+
+## インデックスを作るべきカラム
+
+✅ インデックスが効果的なケース：
+- `WHERE`句で頻繁に使うカラム
+- `JOIN`のON句で使うカラム（外部キー）
+- `ORDER BY`で使うカラム
+- ユニーク制約が必要なカラム
+
+❌ インデックスが不要・逆効果なケース：
+- 値のバリエーションが少ない（is_activeなど true/falseのみ）
+- 頻繁にINSERT/UPDATE/DELETEされるカラム（更新コストが上がる）
+- データ量が少ないテーブル（数百行など）
+
+## EXPLAINでクエリ分析
+
+```sql
+-- クエリの実行計画を確認
+EXPLAIN SELECT * FROM posts WHERE user_id = 1;
+
+-- 実際の実行時間も表示
+EXPLAIN ANALYZE SELECT * FROM posts WHERE user_id = 1;
+```
+
+実行計画の読み方：
+- `Seq Scan`: フルテーブルスキャン（遅い可能性）
+- `Index Scan`: インデックスを使っている（効率的）
+- `cost=...`: 推定コスト
+- `actual time=...`: 実際の実行時間（ANALYZE時）
+
+## N+1問題
+
+**N+1問題**はよくあるパフォーマンスのアンチパターンです。
+
+```javascript
+// N+1問題の例
+const posts = await db.query("SELECT * FROM posts"); // 1クエリ
+
+for (const post of posts) {
+  // 投稿ごとにユーザーを取得 → N件のクエリが発生！
+  const user = await db.query("SELECT * FROM users WHERE id = $1", [post.userId]);
+  post.author = user;
+}
+// 合計: 1 + N クエリ
+```
+
+解決方法：
+
+```sql
+-- JOINで1クエリに
+SELECT posts.*, users.name AS author_name
+FROM posts
+INNER JOIN users ON posts.user_id = users.id;
+```
+
+## ページネーションの最適化
+
+```sql
+-- OFFSETベースの問題点（大きなOFFSETは遅い）
+SELECT * FROM posts ORDER BY id DESC LIMIT 10 OFFSET 100000;
+-- → 100000件をスキャンしてから10件取得
+
+-- カーソルベース（高速）
+SELECT * FROM posts WHERE id < :last_id ORDER BY id DESC LIMIT 10;
+-- → インデックスを使って直接10件取得
+```
+
+## インデックスのメンテナンス
+
+```sql
+-- インデックスの断片化を解消
+REINDEX TABLE posts;
+
+-- 不要になったインデックスの削除
+DROP INDEX idx_old_column;
+
+-- テーブルの統計情報を更新（クエリプランナーに最新情報を提供）
+ANALYZE posts;
+
+-- テーブルの肥大化を解消（デッドタプルの回収）
+VACUUM ANALYZE posts;
+```
+
+<Callout type="info" title="過剰なインデックスは逆効果">
+インデックスはSELECTを速くしますが、INSERT・UPDATE・DELETEのたびにインデックスも更新されます。不要なインデックスを大量に作ると書き込みが遅くなります。実際の問題（遅いクエリ）が発生してからEXPLAINで確認して作成することをおすすめします。
+</Callout>
+
+## まとめ
+
+- インデックスはWHERE・JOIN・ORDER BYで使うカラムに作成する
+- `EXPLAIN ANALYZE`でクエリの実行計画とボトルネックを確認
+- N+1問題はJOINや一括取得で解決する
+- カーソルベースのページネーションがOFFSETより高速
+- インデックスは作りすぎない

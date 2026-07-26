@@ -1,0 +1,172 @@
+---
+title: Promise
+description: PromiseのAPI（then/catch/finally/all/race）を使いこなして非同期処理を書く
+---
+
+## Promiseの作成
+
+```javascript
+const promise = new Promise((resolve, reject) => {
+  // 非同期処理
+  setTimeout(() => {
+    const success = true;
+    if (success) {
+      resolve({ id: 1, name: "田中" }); // 成功時
+    } else {
+      reject(new Error("データ取得失敗")); // 失敗時
+    }
+  }, 1000);
+});
+```
+
+## then / catch / finally
+
+```javascript
+promise
+  .then((data) => {
+    console.log("成功:", data);
+    return data.id; // 次のthenに渡す値
+  })
+  .then((id) => {
+    console.log("ID:", id);
+  })
+  .catch((error) => {
+    console.error("エラー:", error.message);
+  })
+  .finally(() => {
+    console.log("完了（成功・失敗に関わらず）");
+  });
+```
+
+### Promiseチェーン
+
+`.then()`は常に新しいPromiseを返すため、チェーンできます：
+
+```javascript
+fetch("/api/users/1")
+  .then(res => {
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json(); // Promiseを返すと次のthenはその解決値を受け取る
+  })
+  .then(user => {
+    console.log("ユーザー:", user);
+    return fetch(`/api/orders?userId=${user.id}`);
+  })
+  .then(res => res.json())
+  .then(orders => console.log("注文:", orders))
+  .catch(error => console.error("エラー:", error));
+```
+
+## 静的メソッド
+
+### Promise.resolve / Promise.reject
+
+```javascript
+// 即座に解決/拒否されたPromiseを作る
+const resolved = Promise.resolve("即座に成功");
+const rejected = Promise.reject(new Error("即座に失敗"));
+
+resolved.then(v => console.log(v)); // "即座に成功"
+rejected.catch(e => console.error(e.message)); // "即座に失敗"
+```
+
+### Promise.all
+
+**全部成功したら成功**。1つでも失敗したら即座に失敗。
+
+```javascript
+const p1 = fetch("/api/users");
+const p2 = fetch("/api/products");
+const p3 = fetch("/api/orders");
+
+Promise.all([p1, p2, p3])
+  .then(([users, products, orders]) => {
+    // 全部成功した時の処理
+  })
+  .catch(error => {
+    // どれか1つでも失敗したらここに来る
+  });
+```
+
+### Promise.allSettled
+
+**全部完了（成功・失敗関わらず）するまで待つ**。
+
+```javascript
+Promise.allSettled([
+  Promise.resolve("成功"),
+  Promise.reject(new Error("失敗")),
+  Promise.resolve("成功2"),
+]).then(results => {
+  results.forEach(result => {
+    if (result.status === "fulfilled") {
+      console.log("成功:", result.value);
+    } else {
+      console.log("失敗:", result.reason.message);
+    }
+  });
+});
+```
+
+### Promise.race
+
+**最初に完了したPromiseの結果を返す**。
+
+```javascript
+// タイムアウト処理に使える
+function withTimeout(promise, ms) {
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("タイムアウト")), ms)
+  );
+  return Promise.race([promise, timeout]);
+}
+
+withTimeout(fetch("/api/slow"), 3000)
+  .then(res => res.json())
+  .catch(e => console.error(e.message));
+```
+
+### Promise.any
+
+**最初に成功したPromiseの結果を返す**。全部失敗したら`AggregateError`。
+
+```javascript
+// 複数のミラーサーバーから最速で取得
+Promise.any([
+  fetch("https://mirror1.example.com/data"),
+  fetch("https://mirror2.example.com/data"),
+  fetch("https://mirror3.example.com/data"),
+])
+  .then(res => res.json())
+  .then(data => console.log("最速サーバーのデータ:", data));
+```
+
+<Callout type="tip" title="Promise.allとPromise.allSettledの使い分け">
+- **Promise.all**: 1つでも失敗したら全体を失敗扱いにしたい場合（必須データの並列取得）
+- **Promise.allSettled**: それぞれの結果を個別に処理したい場合（任意データの並列取得、部分的な成功を許容）
+</Callout>
+
+## Promiseのベストプラクティス
+
+```javascript
+// 悪い例: Promiseをネストしている（コールバック地獄と同じ）
+fetch("/api/user")
+  .then(res => {
+    res.json().then(user => { // ← ネストしている！
+      console.log(user);
+    });
+  });
+
+// 良い例: Promiseをチェーンする
+fetch("/api/user")
+  .then(res => res.json())
+  .then(user => console.log(user));
+```
+
+## まとめ
+
+- `.then()`でPromiseのチェーンを作り、`.catch()`でエラーを一括処理
+- `Promise.all`で並列実行・全成功待ち
+- `Promise.allSettled`で全完了待ち（失敗を個別処理）
+- `Promise.race`で最速結果取得（タイムアウト実装に有用）
+- Promiseをネストせずチェーンで書く

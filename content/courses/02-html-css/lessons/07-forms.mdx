@@ -1,0 +1,157 @@
+---
+title: ��ォームとバ��デーション
+description: HTML5のフォーム要素を使ってユーザー入力を受け取り、バリデーションを実装する
+---
+
+## フォームの基本構造
+
+```html
+<form action="/submit" method="post" novalidate>
+  <div class="form-group">
+    <label for="email">メールアドレス</label>
+    <input type="email" id="email" name="email" required />
+  </div>
+  <button type="submit">送信</button>
+</form>
+```
+
+- `action`: 送信先URL
+- `method`: 送信方法（`get`または`post`）
+- `novalidate`: ブラウザのデフォルトバリデーションを無効化（カスタムバリデーション用）
+
+## inputのtype属性
+
+適切な`type`を使うと、スマートフォンでは対応したキーボードが表示されます。
+
+```html
+<input type="text" />      <!-- 任意のテキスト -->
+<input type="email" />     <!-- メールアドレス（@必須） -->
+<input type="password" />  <!-- パスワード（非表示） -->
+<input type="number" />    <!-- 数値 -->
+<input type="tel" />       <!-- 電話番号（数字キーボード） -->
+<input type="url" />       <!-- URL（http必須） -->
+<input type="date" />      <!-- 日付ピッカー -->
+<input type="datetime-local" /> <!-- 日時ピッカー -->
+<input type="color" />     <!-- カラー���ッカー -->
+<input type="range" />     <!-- スライダー -->
+<input type="file" />      <!-- ファイル選択 -->
+<input type="checkbox" />  <!-- チェックボックス -->
+<input type="radio" />     <!-- ラジオボタン -->
+<input type="search" />    <!-- 検索ボックス -->
+```
+
+## バリデーション属性
+
+```html
+<input
+  type="email"
+  required                 <!-- 必須入力 -->
+  minlength="5"            <!-- 最小文字数 -->
+  maxlength="100"          <!-- 最大文字数 -->
+  min="0"                  <!-- 最小値（数値） -->
+  max="120"                <!-- 最大値（数値） -->
+  pattern="[a-zA-Z0-9]+"  <!-- 正規表現パターン -->
+  placeholder="例: user@example.com"
+/>
+```
+
+## textarea と select
+
+```html
+<!-- 複数行テキスト -->
+<textarea
+  name="message"
+  rows="5"
+  cols="40"
+  placeholder="メッセージを入力..."
+></textarea>
+
+<!-- プルダウン -->
+<select name="country">
+  <option value="">選択してください</option>
+  <option value="jp">���本</option>
+  <option value="us">アメ���カ</option>
+</select>
+
+<!-- 複数選択可能なselect -->
+<select name="languages" multiple>
+  <option value="js">JavaScript</option>
+  <option value="py">Python</option>
+</select>
+```
+
+## チェックボックスとラジオボタン
+
+```html
+<!-- チェックボックス（複数選択可） -->
+<fieldset>
+  <legend>好きな言語（複数可）</legend>
+  <label>
+    <input type="checkbox" name="lang" value="js" /> JavaScript
+  </label>
+  <label>
+    <input type="checkbox" name="lang" value="py" /> Python
+  </label>
+</fieldset>
+
+<!-- ラジオボタン（1つのみ選択） -->
+<fieldset>
+  <legend>性別</legend>
+  <label>
+    <input type="radio" name="gender" value="male" /> 男性
+  </label>
+  <label>
+    <input type="radio" name="gender" value="female" /> 女性
+  </label>
+</fieldset>
+```
+
+<Callout type="note" title="チェックボックスはlabelで囲む">
+`<input type="checkbox">`を`<label>`で囲むと、テキスト部分をクリックしてもチェックが切り替わります。タップ領域が広がりモバイルユーザビリティが向上��ます。
+</Callout>
+
+## CSS Validation UI
+
+`:valid`と`:invalid`疑似クラスでバリデーション状態に応じたスタイルが当てられます：
+
+```css
+input:valid {
+  border-color: green;
+}
+
+input:invalid {
+  border-color: red;
+}
+
+/* フォーカスを外した後のみ表示 */
+input:not(:focus):invalid {
+  border-color: red;
+}
+```
+
+## JavaScriptによるカスタムバリデーション
+
+```javascript
+const form = document.querySelector("form");
+
+form.addEventListener("submit", (e) => {
+  e.preventDefault();
+
+  const email = document.querySelector("#email");
+  if (!email.value.includes("@")) {
+    email.setCustomValidity("メールアドレスを正しく入力してください");
+    email.reportValidity();
+    return;
+  }
+
+  email.setCustomValidity(""); // エラーをクリア
+  form.submit();
+});
+```
+
+## まとめ
+
+- 適切な`type`属性でモバイル対応とバリデーションを自動化
+- `required`・`min`・`max`・`pattern`などでHTMLバリデーションを設定
+- `<label>`をフォーム要素と紐付けてアクセシビリティを確保
+- `:valid`/`:invalid`でバリデーション状態のスタイルを変更できる

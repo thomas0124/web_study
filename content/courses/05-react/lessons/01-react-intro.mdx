@@ -1,0 +1,135 @@
+---
+title: Reactの思想
+description: なぜReactが生まれたか、コンポーネントベースとUI=f(state)の考え方を理解する
+---
+
+## Reactとは
+
+**React**はFacebook（現Meta）が開発・オープンソース化したUIライブラリです。2013年のリリース以来、フロントエンド開発の主流となっています。
+
+## なぜReactが生まれたか
+
+従来のjQuery時代のフロントエンド開発では、UIの状態とDOMを手動で同期させる必要がありました：
+
+```javascript
+// jQueryスタイル（問題のあるアプローチ）
+let likes = 0;
+
+$("#like-btn").click(() => {
+  likes++;
+  $("#like-count").text(likes);
+  if (likes > 10) {
+    $("#like-count").addClass("popular");
+  }
+  // UIとデータを手動で同期する責任がプログラマにある
+});
+```
+
+このアプローチはアプリが大きくなると状態管理が複雑になり、バグの原因になります。
+
+## UI = f(state)
+
+Reactの核心的な考え方：
+
+```
+UI = f(state)
+```
+
+UIは**状態（state）**の**関数**です。状態が変わればUIが自動的に更新されます。
+
+```javascript
+// Reactスタイル
+function LikeButton() {
+  const [likes, setLikes] = useState(0);
+
+  return (
+    <button onClick={() => setLikes(likes + 1)}>
+      ❤️ {likes}
+    </button>
+  );
+  // stateが変わると自動的に再レンダリング
+}
+```
+
+状態を更新するだけでUIが自動更新される。これがReactの基本思想です。
+
+## コンポーネントベース設計
+
+Reactはページを**コンポーネント**という小さな部品に分割します。
+
+```
+ページ
+├── Header
+│   ├── Logo
+│   └── Navigation
+│       └── NavItem (×複数)
+├── Main
+│   ├── ArticleList
+│   │   └── ArticleCard (×複数)
+│   └── Sidebar
+└── Footer
+```
+
+各コンポーネントは：
+- 独自の状態（state）を持てる
+- 再利用可能
+- 独立してテストできる
+- 組み合わせて複雑なUIを作る
+
+## 宣言的UI vs 命令的UI
+
+| アプローチ | 説明 | 例 |
+|----------|------|-----|
+| **命令的** | 「どのようにやるか」を記述 | DOMを直接操作する（jQuery） |
+| **宣言的** | 「何をしたいか」を記述 | 状態から見たUIを記述する（React） |
+
+```javascript
+// 命令的（命令でDOMを変更）
+const el = document.getElementById("msg");
+el.textContent = isLoggedIn ? "ログイン中" : "ゲスト";
+el.style.color = isLoggedIn ? "green" : "gray";
+
+// 宣言的（状態からUIを記述）
+function UserStatus({ isLoggedIn }) {
+  return (
+    <span style={{ color: isLoggedIn ? "green" : "gray" }}>
+      {isLoggedIn ? "ログイン中" : "ゲスト"}
+    </span>
+  );
+}
+```
+
+宣言的なコードはUIの「あるべき姿」を記述するため、読みやすく予測しやすいです。
+
+## 仮想DOM（Virtual DOM）
+
+Reactは**仮想DOM**を使って効率的にDOMを更新します。
+
+1. stateが更新される
+2. 新しい仮想DOM（軽量なJavaScriptオブジェクト）を生成
+3. 前の仮想DOMと差分比較（Diffing）
+4. 差分部分のみ実際のDOMに反映（Reconciliation）
+
+全体を書き直すのではなく差分のみ更新することで高速なUIが実現されます。
+
+<Callout type="info" title="ReactとReact DOM">
+`react`パッケージはコアのロジック（コンポーネント・Hooks）、`react-dom`はブラウザへのレンダリングを担当します。React Nativeでは`react-dom`の代わりに`react-native`を使って、同じコンポーネントロジックでモバイルアプリを作れます。
+</Callout>
+
+## Reactのエコシステム
+
+| ライブラリ | 用途 |
+|----------|------|
+| **Next.js** | React フレームワーク（SSR/SSG） |
+| **React Router** | SPA のルーティング |
+| **Zustand / Redux** | グローバル状態管理 |
+| **React Query / SWR** | サーバー状態管理・データ取得 |
+| **Tailwind CSS** | スタイリング |
+| **Vitest / Testing Library** | テスト |
+
+## まとめ
+
+- Reactは「UIはstateの関数」という考え方に基づくUIライブラリ
+- コンポーネントに分割して再利用可能なUIを作る
+- 宣言的にUIを記述することで可読性・保守性が向上する
+- 仮想DOMで効率的なDOM更新を実現する

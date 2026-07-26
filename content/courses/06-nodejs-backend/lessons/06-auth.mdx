@@ -1,0 +1,158 @@
+---
+title: 認証と認可
+description: JWT・セッション・パスワードハッシュを使ったWebアプリの認証・認可を学ぶ
+---
+
+## 認証と認可の違い
+
+| | 認証（Authentication） | 認可（Authorization） |
+|-|----------------------|---------------------|
+| 問い | あなたは誰ですか？ | あなたは何ができますか？ |
+| 例 | ログイン | 管理者のみ閲覧可能 |
+| 英語 | AuthN | AuthZ |
+
+## パスワードのハッシュ化
+
+パスワードは絶対に平文でDBに保存しません。**bcrypt**を使ってハッシュ化します。
+
+```javascript
+import bcrypt from "bcrypt";
+
+const SALT_ROUNDS = 12; // 高いほど安全だが遅い
+
+// 登録時: ハッシュ化して保存
+async function register(email, password) {
+  const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+  await db.users.create({ email, password: hashedPassword });
+}
+
+// ログイン時: 比較
+async function login(email, password) {
+  const user = await db.users.findBy({ email });
+  if (!user) throw new Error("ユーザーが見つかりません");
+
+  const isValid = await bcrypt.compare(password, user.password);
+  if (!isValid) throw new Error("パスワードが間違っています");
+
+  return user;
+}
+```
+
+## JWTによる認証
+
+**JWT（JSON Web Token）**はJSON形式のクレームをBase64エンコードして署名した文字列です。
+
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.
+eyJ1c2VySWQiOjEsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNjM5MDAwMDAwfQ.
+signature
+│                                                 │
+└── ヘッダー.ペイロード.署名 ──────────────────────┘
+```
+
+JWTはサーバーが秘密鍵で署名するため、改ざんを検出できます。
+
+```javascript
+import jwt from "jsonwebtoken";
+
+const JWT_SECRET = process.env.JWT_SECRET; // 強力なランダム文字列
+
+// トークン生成
+function generateToken(user) {
+  return jwt.sign(
+    { userId: user.id, role: user.role }, // ペイロード
+    JWT_SECRET,
+    { expiresIn: "24h" } // 有効期限
+  );
+}
+
+// ログインAPI
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await loginUser(email, password);
+    const token = generateToken(user);
+
+    res.json({ token });
+  } catch (e) {
+    res.status(401).json({ error: e.message });
+  }
+});
+
+// トークン検証ミドルウェア
+function authenticate(req, res, next) {
+  try {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token) return res.status(401).json({ error: "未認証" });
+
+    req.user = jwt.verify(token, JWT_SECRET);
+    next();
+  } catch {
+    res.status(401).json({ error: "無効なトークン" });
+  }
+}
+```
+
+## ロールベースのアクセス制御（RBAC）
+
+```javascript
+function requireRole(...roles) {
+  return (req, res, next) => {
+    if (!req.user) return res.status(401).json({ error: "未認証" });
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ error: "権限がありません" });
+    }
+    next();
+  };
+}
+
+// 管理者のみアクセス可能
+app.delete(
+  "/api/users/:id",
+  authenticate,
+  requireRole("admin"),
+  async (req, res) => {
+    await deleteUser(req.params.id);
+    res.status(204).send();
+  }
+);
+```
+
+<Callout type="warning" title="JWTのセキュリティ注意事項">
+- JWTはBase64エンコードされているだけで**暗号化されていません**。機密情報をペイロードに入れないようにしましょう（パスワードなど）
+- `JWT_SECRET`は十分に長くランダムな値にする（32文字以上）
+- トークンの有効期限を短くする（アクセストークン: 15分〜1時間）
+- HTTPSを使ってトークンの盗聴を防ぐ
+</Callout>
+
+## リフレッシュトークン
+
+アクセストークンの有効期限を短くしながらUXを保つには、リフレッシュトークンを使います：
+
+```javascript
+// アクセストークン（短命）
+const accessToken = jwt.sign({ userId }, JWT_SECRET, { expiresIn: "15m" });
+
+// リフレッシュトークン（長命・DBに保存）
+const refreshToken = jwt.sign({ userId }, REFRESH_SECRET, { expiresIn: "7d" });
+await db.refreshTokens.create({ userId, token: refreshToken });
+
+// リフレッシュエンドポイント
+app.post("/api/auth/refresh", async (req, res) => {
+  const { refreshToken } = req.body;
+  const stored = await db.refreshTokens.findBy({ token: refreshToken });
+  if (!stored) return res.status(401).json({ error: "無効なリフレッシュトークン" });
+
+  const payload = jwt.verify(refreshToken, REFRESH_SECRET);
+  const newAccessToken = jwt.sign({ userId: payload.userId }, JWT_SECRET, { expiresIn: "15m" });
+  res.json({ accessToken: newAccessToken });
+});
+```
+
+## まとめ
+
+- パスワードはbcryptでハッシュ化してDBに保存
+- JWTでステートレスな認証を実装できる
+- `authenticate`ミドルウェアで保護されたルートへのアクセスを制御
+- `requireRole`でロールベースのアクセス制御を実装
+- アクセストークンは短命、リフレッシュトークンで更新する

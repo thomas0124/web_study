@@ -1,0 +1,187 @@
+---
+title: async/await
+description: async/awaitを使って非同期処理を同期的な見た目で書く方法を習得する
+---
+
+## async/awaitとは
+
+**async/await**はPromiseをより直感的に書くための構文です。ES2017で導入されました。`async`関数の中で`await`を使うと、Promiseの解決を「待って」から次の処理に進みます。
+
+## 基本的な使い方
+
+```javascript
+// Promiseで書いた場合
+function fetchUser(id) {
+  return fetch(`/api/users/${id}`)
+    .then(res => res.json())
+    .then(user => {
+      console.log(user);
+      return user;
+    });
+}
+
+// async/awaitで書いた場合（同じ動作）
+async function fetchUser(id) {
+  const res = await fetch(`/api/users/${id}`);
+  const user = await res.json();
+  console.log(user);
+  return user;
+}
+```
+
+`async`関数は常にPromiseを返します：
+
+```javascript
+async function greet() {
+  return "Hello!"; // Promise.resolve("Hello!")と同じ
+}
+
+greet().then(msg => console.log(msg)); // "Hello!"
+```
+
+## エラーハンドリング
+
+```javascript
+async function fetchUser(id) {
+  try {
+    const res = await fetch(`/api/users/${id}`);
+
+    if (!res.ok) {
+      throw new Error(`HTTP error: ${res.status}`);
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error("ユーザー取得エラー:", error.message);
+    return null;
+  }
+}
+```
+
+## 並列実行
+
+`await`を安易に連続して書くと、直列実行になってしまいます。
+
+```javascript
+// 悪い例: 直列実行（合計2秒かかる）
+async function fetchBoth() {
+  const user = await fetchUser(1);    // 1秒待つ
+  const posts = await fetchPosts(1);  // さらに1秒待つ
+  return { user, posts };
+}
+
+// 良い例: 並列実行（最大1秒で完了）
+async function fetchBoth() {
+  const [user, posts] = await Promise.all([
+    fetchUser(1),
+    fetchPosts(1),
+  ]);
+  return { user, posts };
+}
+```
+
+## 複雑な非同期フロー
+
+```javascript
+async function loadDashboard(userId) {
+  // ユーザー情報を取得
+  const user = await fetchUser(userId);
+  if (!user) throw new Error("ユーザーが見つかりません");
+
+  // ユーザーに関連するデータを並列取得
+  const [orders, notifications, profile] = await Promise.all([
+    fetchOrders(userId),
+    fetchNotifications(userId),
+    fetchProfile(userId),
+  ]);
+
+  return {
+    user,
+    orders,
+    notifications,
+    profile,
+  };
+}
+```
+
+## top-levelのawait
+
+モジュールのトップレベルで`await`が使えます（ES2022）：
+
+```javascript
+// module.js
+const config = await fetch("/api/config").then(r => r.json());
+export default config;
+```
+
+## 注意点: awaitの繰り返し
+
+ループ内でawaitを使う場合は注意が必要です：
+
+```javascript
+// 直列実行（遅い）
+const ids = [1, 2, 3, 4, 5];
+for (const id of ids) {
+  const user = await fetchUser(id); // 1件ずつ待つ
+  console.log(user);
+}
+
+// 並列実行（速い）
+const users = await Promise.all(ids.map(id => fetchUser(id)));
+users.forEach(user => console.log(user));
+```
+
+<Callout type="warning" title="forEach内でawaitは機能しない">
+`Array.forEach`はPromiseを待ちません。以下のコードは意図通りに動きません：
+
+```javascript
+// バグ: forEachはawaitを待たない
+[1, 2, 3].forEach(async (id) => {
+  const user = await fetchUser(id); // 待たない！
+});
+
+// 正しい: for...ofまたはPromise.allを使う
+for (const id of [1, 2, 3]) {
+  const user = await fetchUser(id); // 順番に待つ
+}
+```
+</Callout>
+
+## async関数のパターン集
+
+```javascript
+// タイムアウト付きfetch
+async function fetchWithTimeout(url, ms = 5000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), ms);
+
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    return await res.json();
+  } catch (e) {
+    if (e.name === "AbortError") throw new Error("タイムアウト");
+    throw e;
+  }
+}
+
+// リトライ処理
+async function fetchWithRetry(url, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fetch(url).then(r => r.json());
+    } catch (e) {
+      if (i === retries - 1) throw e;
+      await new Promise(r => setTimeout(r, 1000 * (i + 1))); // 指数バックオフ
+    }
+  }
+}
+```
+
+## まとめ
+
+- `async`関数の中でのみ`await`が使える
+- `await`はPromiseの解決まで処理を一時停止する
+- エラーは`try/catch`で処理する
+- 依存関係のない複数の非同期処理は`Promise.all`で並列化する
+- `forEach`内ではawaitが機能しない。`for...of`を使う

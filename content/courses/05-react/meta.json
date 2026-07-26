@@ -1,0 +1,8 @@
+{
+  "slug": "react",
+  "title": "Reactフロントエンド",
+  "description": "現代のフロントエンド開発の主流であるReactを基礎から学ぶ。コンポーネント設計・Hooks・状態管理・Next.js入門まで体系的に習得する。",
+  "level": "中級",
+  "order": 5,
+  "lessonCount": 8
+}

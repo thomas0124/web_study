@@ -1,0 +1,162 @@
+---
+title: テスト駆動開発（TDD）
+description: ユニットテスト・統合テスト・E2Eテストの違いと、TDDサイクルを使った開発手法を学ぶ
+---
+
+## テストの種類
+
+```
+       E2Eテスト（少数・遅い・コスト大）
+          ↑
+     統合テスト（中程度）
+          ↑
+   ユニットテスト（多数・高速・コスト小）
+```
+
+| テスト | 対象 | 速度 | 用途 |
+|-------|------|------|------|
+| ユニット | 関数・コンポーネント単体 | ミリ秒 | ロジックの検証 |
+| 統合 | 複数モジュールの組み合わせ | 秒 | APIの動作確認 |
+| E2E | ブラウザでの実際の操作 | 分 | 重要フローの確認 |
+
+## Vitestでユニットテスト
+
+```typescript
+// src/utils/validation.ts
+export function validateEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+export function calculateDiscount(price: number, rate: number): number {
+  if (rate < 0 || rate > 1) throw new Error("割引率は0〜1の範囲で指定してください");
+  return Math.round(price * (1 - rate));
+}
+```
+
+```typescript
+// src/utils/validation.test.ts
+import { describe, it, expect } from "vitest";
+import { validateEmail, calculateDiscount } from "./validation";
+
+describe("validateEmail", () => {
+  it("有効なメールアドレスを受け入れる", () => {
+    expect(validateEmail("user@example.com")).toBe(true);
+    expect(validateEmail("user+tag@sub.example.co.jp")).toBe(true);
+  });
+
+  it("無効なメールアドレスを弾く", () => {
+    expect(validateEmail("not-an-email")).toBe(false);
+    expect(validateEmail("@example.com")).toBe(false);
+    expect(validateEmail("user@")).toBe(false);
+  });
+});
+
+describe("calculateDiscount", () => {
+  it("20%割引を計算できる", () => {
+    expect(calculateDiscount(1000, 0.2)).toBe(800);
+  });
+
+  it("範囲外の割引率でエラーを投げる", () => {
+    expect(() => calculateDiscount(1000, -0.1)).toThrow();
+    expect(() => calculateDiscount(1000, 1.5)).toThrow();
+  });
+});
+```
+
+## TDD（テスト駆動開発）のサイクル
+
+TDDはテストを先に書いてから実装するアプローチです：
+
+```
+1. Red:   失敗するテストを書く
+2. Green: テストが通るように最小限実装する
+3. Refactor: コードをきれいにする（テストは維持）
+→ 繰り返す
+```
+
+TDDの実例：
+
+```typescript
+// Step 1: Red - まずテストを書く（validatePasswordが未実装）
+it("8文字以上のパスワードを受け入れる", () => {
+  expect(validatePassword("StrongP@ss1")).toBe(true);
+  // → validatePasswordが存在しないのでエラー
+});
+
+// Step 2: Green - テストが通る最小限の実装
+export function validatePassword(password: string): boolean {
+  return password.length >= 8;
+}
+
+// Step 3: Refactor - 他の要件も追加してテストを増やす
+it("大文字・小文字・数字・記号を含む", () => {
+  expect(validatePassword("weakpassword")).toBe(false); // 数字・記号なし
+  expect(validatePassword("Weak1pass")).toBe(false);    // 記号なし
+  expect(validatePassword("Str0ng@pass")).toBe(true);
+});
+
+// 実装を拡張
+export function validatePassword(password: string): boolean {
+  return (
+    password.length >= 8 &&
+    /[A-Z]/.test(password) &&
+    /[a-z]/.test(password) &&
+    /[0-9]/.test(password) &&
+    /[^A-Za-z0-9]/.test(password)
+  );
+}
+```
+
+## Reactコンポーネントのテスト
+
+```typescript
+// components/Button.test.tsx
+import { render, screen, fireEvent } from "@testing-library/react";
+import { Button } from "./Button";
+
+it("クリック時にonClickが呼ばれる", async () => {
+  const handleClick = vi.fn();
+  render(<Button onClick={handleClick}>送信</Button>);
+
+  await fireEvent.click(screen.getByRole("button", { name: "送信" }));
+
+  expect(handleClick).toHaveBeenCalledOnce();
+});
+
+it("disabledの時はクリックできない", async () => {
+  const handleClick = vi.fn();
+  render(<Button onClick={handleClick} disabled>送信</Button>);
+
+  expect(screen.getByRole("button")).toBeDisabled();
+});
+```
+
+## E2EテストとPlaywright
+
+```typescript
+// e2e/login.spec.ts
+import { test, expect } from "@playwright/test";
+
+test("ログインフローが正常に動作する", async ({ page }) => {
+  await page.goto("http://localhost:3000/login");
+
+  await page.fill('[name="email"]', "user@example.com");
+  await page.fill('[name="password"]', "password123");
+  await page.click('button[type="submit"]');
+
+  await expect(page).toHaveURL("/dashboard");
+  await expect(page.getByText("ようこそ")).toBeVisible();
+});
+```
+
+<Callout type="info" title="テストは設計ツールでもある">
+TDDで先にテストを書くと「この関数をどう使いたいか」を先に考えることになり、自然と使いやすいAPIになります。テストが書きにくい（設定が複雑・多くの依存がある）と感じたら、それはコードの設計を見直すシグナルです。
+</Callout>
+
+## まとめ
+
+- ユニット・統合・E2Eのテストを適切に組み合わせる
+- VitestでJavaScript/TypeScriptのユニットテストを書く
+- TDDは「Red → Green → Refactor」のサイクルで開発する
+- Testing Libraryでユーザー視点のコンポーネントテストを書く
+- Playwrightで重要なユーザーフローをE2Eテストで検証する

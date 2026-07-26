@@ -1,0 +1,155 @@
+---
+title: useEffect
+description: useEffectフックを使った副作用の管理（データ取得・タイマー・クリーンアップ）を学ぶ
+---
+
+## useEffectとは
+
+**useEffect**はReactコンポーネントの外部システム（API・タイマー・DOMイベント）との同期に使うフックです。
+
+「副作用（Side Effect）」= レンダリング以外の処理全般
+- データの取得（fetch）
+- タイマーの設定
+- 外部イベントのサブスクライブ
+- DOMの直接操作
+
+## 基本的な使い方
+
+```jsx
+import { useState, useEffect } from "react";
+
+function UserProfile({ userId }) {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`/api/users/${userId}`)
+      .then(res => res.json())
+      .then(data => {
+        setUser(data);
+        setLoading(false);
+      });
+  }, [userId]); // 依存配列: userIdが変わったら再実行
+
+  if (loading) return <p>読み込み中...</p>;
+  return <p>{user?.name}</p>;
+}
+```
+
+## 依存配列の3パターン
+
+```jsx
+// 1. 依存配列なし: 毎回のレンダリング後に実行（非推奨）
+useEffect(() => {
+  console.log("毎回実行");
+});
+
+// 2. 空の依存配列: マウント時（初回レンダリング後）のみ実行
+useEffect(() => {
+  console.log("マウント時のみ");
+}, []);
+
+// 3. 依存配列あり: マウント時 + 依存値が変わった時に実行
+useEffect(() => {
+  console.log("countが変わった:", count);
+}, [count]);
+```
+
+## クリーンアップ関数
+
+useEffectがクリーンアップ関数を返すと、次の実行前またはアンマウント時に呼ばれます。
+
+```jsx
+function Timer() {
+  const [seconds, setSeconds] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setSeconds(prev => prev + 1);
+    }, 1000);
+
+    // クリーンアップ: コンポーネントがアンマウントされた時にタイマーを停止
+    return () => clearInterval(id);
+  }, []);
+
+  return <p>{seconds}秒経過</p>;
+}
+```
+
+```jsx
+// イベントリスナーのクリーンアップ
+useEffect(() => {
+  const handleResize = () => setWidth(window.innerWidth);
+  window.addEventListener("resize", handleResize);
+
+  return () => window.removeEventListener("resize", handleResize);
+}, []);
+```
+
+## データ取得のパターン
+
+```jsx
+function PostList() {
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function fetchPosts() {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await fetch("/api/posts", { signal: controller.signal });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        setPosts(data);
+      } catch (e) {
+        if (e.name !== "AbortError") {
+          setError(e.message);
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchPosts();
+
+    // クリーンアップ: 未完了のリクエストをキャンセル
+    return () => controller.abort();
+  }, []);
+
+  if (loading) return <p>読み込み中...</p>;
+  if (error) return <p>エラー: {error}</p>;
+  return <ul>{posts.map(p => <li key={p.id}>{p.title}</li>)}</ul>;
+}
+```
+
+<Callout type="warning" title="useEffectの依存配列には正直に">
+依存配列に使っているすべての変数を入れることが必要です。`eslint-plugin-react-hooks`の`exhaustive-deps`ルールで自動チェックできます。依存配列に嘘をつくと予期しないバグの原因になります。
+</Callout>
+
+## useEffectを使わなくていいケース
+
+React 18以降、多くのケースでuseEffectが不要になりました：
+
+```jsx
+// 不要: レンダリング中に計算できる
+const [count, setCount] = useState(0);
+const doubled = count * 2; // useEffectは不要
+
+// 不要: イベントハンドラで処理できる
+const handleSubmit = async () => {
+  await saveData(formData); // useEffectは不要
+};
+```
+
+## まとめ
+
+- useEffectは外部システムとの同期に使う
+- 依存配列で実行タイミングを制御する（空=マウント時のみ）
+- クリーンアップ関数でタイマー・イベント・リクエストを後片付けする
+- データ取得にはAbortControllerでキャンセル対応する
+- 計算できるものやイベントで処理できるものはuseEffectを使わない

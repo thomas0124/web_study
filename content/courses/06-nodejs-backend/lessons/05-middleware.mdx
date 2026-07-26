@@ -1,0 +1,156 @@
+---
+title: ミドルウェア
+description: Expressのミドルウェアの仕組みを理解し、認証・ロギング・CORSなどを実装する
+---
+
+## ミドルウェアとは
+
+**ミドルウェア**はリクエストとレスポンスの間に挟まれる処理です。Expressではミドルウェアを重ねることで機能を追加できます。
+
+```
+リクエスト → [ミドルウェア1] → [ミドルウェア2] → [ルートハンドラ] → レスポンス
+```
+
+ミドルウェアは`(req, res, next)`の3引数を持つ関数です。`next()`を呼ぶと次のミドルウェアへ進みます。
+
+## 基本的なミドルウェア
+
+```javascript
+// カスタムミドルウェアの基本形
+function myMiddleware(req, res, next) {
+  console.log(`${req.method} ${req.url}`);
+  next(); // 次に進む（呼ばないと処理が止まる）
+}
+
+// 全ルートに適用
+app.use(myMiddleware);
+
+// 特定のパスに適用
+app.use("/api", myMiddleware);
+
+// 特定のルートに適用
+app.get("/users", myMiddleware, (req, res) => {
+  res.json([]);
+});
+```
+
+## リクエストロギング
+
+```javascript
+function requestLogger(req, res, next) {
+  const start = Date.now();
+
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    console.log(
+      `[${new Date().toISOString()}] ${req.method} ${req.url} ${res.statusCode} ${duration}ms`
+    );
+  });
+
+  next();
+}
+
+app.use(requestLogger);
+// → [2026-07-26T00:00:00.000Z] GET /api/users 200 15ms
+```
+
+## CORS設定
+
+**CORS（Cross-Origin Resource Sharing）**は異なるオリジン（ドメイン・ポート）からのリクエストを制御する仕組みです。
+
+```javascript
+import cors from "cors";
+
+// すべてのオリジンを許可（開発時のみ）
+app.use(cors());
+
+// 本番環境では制限する
+app.use(cors({
+  origin: ["https://myapp.com", "https://www.myapp.com"],
+  methods: ["GET", "POST", "PATCH", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true, // Cookieを許可する場合
+}));
+```
+
+## レートリミット
+
+DoS攻撃やスパムを防ぐため、一定時間内のリクエスト数を制限します：
+
+```javascript
+import rateLimit from "express-rate-limit";
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15分
+  max: 100,                  // 最大100リクエスト
+  message: { error: "リクエストが多すぎます。しばらくお待ちください。" },
+  standardHeaders: true,     // RateLimit-*ヘッダーを送信
+});
+
+app.use("/api", limiter);
+```
+
+## 認証ミドルウェア
+
+```javascript
+import jwt from "jsonwebtoken";
+
+function authenticate(req, res, next) {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader?.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : null;
+
+  if (!token) {
+    return res.status(401).json({ error: "認証が必要です" });
+  }
+
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = payload; // 後続のミドルウェアで使えるようにする
+    next();
+  } catch {
+    return res.status(401).json({ error: "無効なトークンです" });
+  }
+}
+
+// 保護されたルートに適用
+app.get("/api/profile", authenticate, (req, res) => {
+  res.json(req.user);
+});
+```
+
+<Callout type="tip" title="ミドルウェアの登録順序">
+ミドルウェアは**登録した順序**で実行されます。エラーハンドラは最後に、ロギングは最初に登録します。認証チェックはルートハンドラの前に配置します。
+</Callout>
+
+## バリデーションミドルウェア
+
+```javascript
+function validateBody(schema) {
+  return (req, res, next) => {
+    const result = schema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(422).json({ error: result.error.issues });
+    }
+    req.validatedBody = result.data;
+    next();
+  };
+}
+
+// 使い方
+const createUserSchema = z.object({ name: z.string(), email: z.string().email() });
+
+app.post("/users", validateBody(createUserSchema), (req, res) => {
+  const { name, email } = req.validatedBody;
+  res.status(201).json({ id: 1, name, email });
+});
+```
+
+## まとめ
+
+- ミドルウェアは`(req, res, next)`の関数でリクエストを処理
+- `next()`で次のミドルウェアへ進む
+- ロギング・CORS・レートリミット・認証をミドルウェアで実装
+- 登録順序が実行順序になる
+- エラーハンドラは最後に、ロギングは最初に登録する

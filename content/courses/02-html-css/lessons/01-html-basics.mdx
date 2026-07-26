@@ -1,0 +1,137 @@
+---
+title: HTML基礎
+description: Webページの骨格を作るHTMLの基本的な構造とタグを学ぶ
+---
+
+## HTMLとは
+
+**HTML（HyperText Markup Language）**はWeb���ージの骨格を作るマークアップ言語です。「マークアップ」とはテキストに意味や構造を付けることで、HTMLでは**タグ**を使って行います。
+
+CSSやJavaScriptがどれだけ優れていても、HTMLがなければWebページは存在できません。HTMLはWebの最も基本的な技術です。
+
+## HTMLの基本構造
+
+すべ���のHTMLファイルは以下の構造を持ちま���：
+
+```html
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>��ージタイトル</title>
+  </head>
+  <body>
+    <!-- ここにページの内容を書く -->
+    <h1>こんにちは</h1>
+    <p>これはHTMLのサンプルです。</p>
+  </body>
+</html>
+```
+
+各部分の役割：
+
+| 要素 | 役割 |
+|------|------|
+| `<!DOCTYPE html>` | HTML5文書であることを��言 |
+| `<html lang="ja">` | 文書全体のルート要素、言語を日本語に指定 |
+| `<head>` | ページのメタ情報（タイトル・文字コードな���） |
+| `<body>` | ブラウザに表示される内容 |
+
+## 基本的なタグ
+
+### 見出し（h1〜h6）
+
+```html
+<h1>最大の見出し（1ページに1つ）</h1>
+<h2>セクション見出し</h2>
+<h3>サブセクション見出し</h3>
+```
+
+h1〜h6の数字は**視覚的な大きさ**ではなく**論理的な階層**を表します。h1は1ページに1つが原則です。
+
+### 段落・テキスト
+
+```html
+<p>これは段落です。ブロック要素なので前後に改行が入ります。</p>
+<strong>重要なテキスト（太字・重要度）</strong>
+<em>強調テキスト（斜体・強調）</em>
+<br /> <!-- 改行 -->
+```
+
+### リスト
+
+```html
+<!-- 順序なしリスト -->
+<ul>
+  <li>リンゴ</li>
+  <li>バナナ</li>
+</ul>
+
+<!-- 順序付きリスト -->
+<ol>
+  <li>最初にやること</li>
+  <li>次���やること</li>
+</ol>
+```
+
+### リンク・画像
+
+```html
+<!-- リンク -->
+<a href="https://example.com" target="_blank" rel="noopener noreferrer">
+  外部サイトへ
+</a>
+
+<!-- 画像 -->
+<img src="photo.jpg" alt="写真の説明" width="400" height="300" />
+```
+
+<Callout type="warning" title="altテキストは必須">
+`<img>`の`alt`属性はスクリーンリーダーが読み上げるテキストです。省略するとアクセシビリティが損なわれ、SEOにも悪影響があります。必ず画像の内容を簡潔に説明するテキストを入れましょう。
+</Callout>
+
+### テーブ��
+
+```html
+<table>
+  <thead>
+    <tr>
+      <th>名前</th>
+      <th>年齢</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>田中太郎</td>
+      <td>25</td>
+    </tr>
+  </tbody>
+</table>
+```
+
+## ブロック要素とインライン要素
+
+HTMLの要素は2種類に分類されます：
+
+**ブロック要素**: 前後に改行が入り、幅いっぱいに広がる  
+例: `<div>`, `<p>`, `<h1>〜<h6>`, `<ul>`, `<table>`
+
+**インライン要素**: 文章の流れの中に並ぶ  
+例: `<span>`, `<a>`, `<img>`, `<strong>`, `<em>`
+
+```html
+<div>ブロック要素（前後に改行）</div>
+<span>インライン要素</span>（テキストの中に並ぶ）
+```
+
+## HTMLの検証方法
+
+書いたHTMLが正しいかどうかは [W3C Markup Validator](https://validator.w3.org/) で確認できます。
+
+## まとめ
+
+- HTMLはタグで囲んで意味と構造を付けるマークアップ言語
+- `<!DOCTYPE html>`, `<html>`, `<head>`, `<body>` が基本構造
+- 見出し・段落・リスト・リンク・画像の基本タグを押さえる
+- altテキストはアクセシビリティとSEOのために必須

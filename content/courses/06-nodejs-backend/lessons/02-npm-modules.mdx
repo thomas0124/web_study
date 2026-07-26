@@ -1,0 +1,148 @@
+---
+title: npmとモジュール管理
+description: npmの基本操作とpackage.jsonの読み方、セマンティックバージョニングを学ぶ
+---
+
+## npmとは
+
+**npm（Node Package Manager）**はNode.jsの標準パッケージマネージャーです。世界最大規模のオープンソースライブラリのレジストリで、誰でも自作のパッケージを公開できます。
+
+## package.jsonの構造
+
+```json
+{
+  "name": "my-app",
+  "version": "1.0.0",
+  "description": "サンプルアプリ",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "dotenv": "^16.0.3"
+  },
+  "devDependencies": {
+    "vitest": "^1.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
+```
+
+## よく使うnpmコマンド
+
+```bash
+# パッケージのインストール
+npm install express         # dependenciesに追加
+npm install -D typescript   # devDependenciesに追加
+npm install                 # package.jsonの全依存をインストール
+
+# パッケージの削除
+npm uninstall express
+
+# パッケージの更新
+npm update
+npm outdated  # 古いパッケージを確認
+
+# スクリプトの実行
+npm run dev
+npm test      # "test"スクリプトはrunが不要
+
+# パッケージの情報確認
+npm list               # インストール済みパッケージ
+npm info express       # パッケージ情報
+
+# グローバルインストール
+npm install -g typescript
+npx ts-node script.ts  # インストールせずに実行
+```
+
+## セマンティックバージョニング（SemVer）
+
+```
+1.2.3
+│ │ └── パッチ（bugfix・後方互換）
+│ └──── マイナー（新機能・後方互換）
+└────── メジャー（破壊的変更）
+```
+
+package.jsonのバージョン指定：
+
+```json
+{
+  "dependencies": {
+    "express": "4.18.2",   // 完全一致
+    "express": "~4.18.2",  // パッチのみ自動更新（4.18.x）
+    "express": "^4.18.2",  // マイナーまで自動更新（4.x.x）（一般的）
+    "express": "*"         // 最新（非推奨）
+  }
+}
+```
+
+## package-lock.json / pnpm-lock.yaml
+
+ロックファイルは**実際にインストールされたバージョンを記録**します。チームメンバーや本番環境で全員が同じバージョンを使えるよう、Gitに含めるべきです。
+
+```bash
+# ロックファイルを尊重してインストール（CI/本番環境推奨）
+npm ci
+pnpm install --frozen-lockfile
+```
+
+## pnpmとyarnの違い
+
+| | npm | pnpm | yarn |
+|-|-----|------|------|
+| インストール速度 | 普通 | 高速 | 高速 |
+| ディスク使用量 | 多い | 少ない（シムリンク） | 普通 |
+| workspace対応 | △ | ◎ | ◎ |
+| 採用率 | 最大 | 増加中 | 多い |
+
+## .envと環境変数
+
+機密情報（APIキー・DB接続文字列）はコードに直書きせず、環境変数で管理します。
+
+```bash
+# .env
+PORT=3000
+DATABASE_URL=postgres://user:pass@localhost/mydb
+API_KEY=secret_key_here
+```
+
+```javascript
+// dotenvを使って.envを読み込む
+import "dotenv/config";
+
+const port = process.env.PORT || 3000;
+const dbUrl = process.env.DATABASE_URL;
+```
+
+<Callout type="warning" title=".envをGitに含めない">
+`.env`ファイルには機密情報が含まれるため、`.gitignore`に必ず追加します。代わりに`.env.example`（ダミー値入り）をコミットして、チームに必要な環境変数を伝えます。
+</Callout>
+
+## よく使うパッケージ
+
+| カテゴリ | パッケージ | 用途 |
+|---------|----------|------|
+| Webフレームワーク | express, fastify | HTTPサーバー |
+| 環境変数 | dotenv | .envの読み込み |
+| バリデーション | zod, joi | 入力値検証 |
+| ORM | prisma, drizzle | DB操作 |
+| 認証 | passport, lucia | 認証 |
+| ロギング | winston, pino | ログ管理 |
+| テスト | vitest, jest | テスト |
+
+## まとめ
+
+- npmはNode.jsのパッケージマネージャー（pnpm・yarnも選択肢）
+- `package.json`で依存関係とスクリプトを管理
+- セマンティックバージョニングでバージョン互換性を判断できる
+- ロックファイルは全員が同じバージョンを使うために重要
+- 機密情報は.envで管理してGitに含めない

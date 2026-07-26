@@ -1,0 +1,146 @@
+---
+title: レスポンシブデザイン
+description: スマートフォン・タブレット・PCなど様々な画面サイズに対応するデザイン手法を学ぶ
+---
+
+## レスポンシブデザインとは
+
+**レスポンシブWebデザイン（RWD）**とは、1つのHTMLで画面サイズに応じてレイアウトを変化させるデザイン手法です。スマートフォン・タブレット・PCすべてで適切な表示を実現します。
+
+現代のWebトラフィックの過半数はスマートフォンからです。レスポンシブデザインは必須スキルです。
+
+## viewportの設定
+
+まずHTMLの`<head>`に以下を記述します：
+
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+```
+
+これがないと、スマートフォンでPCサイト全体を縮小して表示してしまいます。
+
+## メディアクエリ
+
+**メディアクエリ**は画面幅などの条件に応じてCSSを切り替える仕組みです。
+
+```css
+/* デフォルト（モバイル向け） */
+.container {
+  display: block;
+  padding: 1rem;
+}
+
+/* 768px以上（タブレット以上）に適用 */
+@media (min-width: 768px) {
+  .container {
+    display: flex;
+    padding: 2rem;
+  }
+}
+
+/* 1024px以上（PC以上）に適用 */
+@media (min-width: 1024px) {
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+}
+```
+
+## モバイルファースト
+
+**モバイルファースト**とは、最初にモバイル向けのスタイルを書き、`min-width`のメディアクエリで大きな画面向けに上書きする設計思想です。
+
+```css
+/* モバイルファースト */
+.nav {
+  display: none; /* モバイルでは非表示 */
+}
+
+@media (min-width: 768px) {
+  .nav {
+    display: flex; /* タブレット以��で表示 */
+  }
+}
+```
+
+デスクトップファースト（`max-width`を使う方法）より保守性が高く推奨されます。
+
+## ブレークポイントの一般的な設定
+
+| 名前 | 幅 | 対象デバイス |
+|------|-----|------------|
+| sm | 640px以上 | 大きめのスマートフォン |
+| md | 768px以上 | タブレット |
+| lg | 1024px以上 | ノートPC |
+| xl | 1280px以上 | デスクトップ |
+| 2xl | 1536px以上 | 大型モニター |
+
+Tailwind CSSでは上記のブレークポイントがデフォルトで定義されています。
+
+## 相対単位の活用
+
+```css
+/* 固定px（×レスポンシブ向きでない） */
+font-size: 16px;
+
+/* rem（ルートのfont-sizeに対する比率） */
+font-size: 1rem;   /* 16px */
+font-size: 1.5rem; /* 24px */
+
+/* em（親要素のfont-sizeに対する比率） */
+font-size: 1.2em;
+
+/* %（親要素のサイズに対する比率） */
+width: 50%;
+
+/* vw/vh（ビューポートに対する比率） */
+width: 100vw;  /* ビューポート幅の100% */
+height: 100vh; /* ビューポート高さの100% */
+```
+
+<Callout type="tip" title="remを使う理由">
+`rem`はブラウザのフォントサイズ設定に従うため、ユーザーがフォントサイズを変更しても適切にスケールします。アクセシビリティの観点からもremの使用が推奨されます。
+</Callout>
+
+## 画像のレスポンシブ対応
+
+```css
+/* 親要素を超えない最大幅 */
+img {
+  max-width: 100%;
+  height: auto;
+}
+```
+
+```html
+<!-- srcsetで解像度に応じた画像を切り替え -->
+<img
+  src="image-800w.jpg"
+  srcset="image-400w.jpg 400w, image-800w.jpg 800w, image-1200w.jpg 1200w"
+  sizes="(max-width: 600px) 400px, (max-width: 1000px) 800px, 1200px"
+  alt="説明"
+/>
+```
+
+## Flexboxを使ったレスポンシブ
+
+```css
+.card-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.card {
+  flex: 1 1 300px; /* 最小300px、画面が広ければ伸びる */
+}
+```
+
+## まとめ
+
+- viewportメタタグが必須
+- メディアクエリで画面幅に応じたスタイルを切り替える
+- モバイルファースト（min-width）で設計する
+- px固定ではなくrem・%・vwなど相対単位を使う
+- 画像には`max-width: 100%`を設定する

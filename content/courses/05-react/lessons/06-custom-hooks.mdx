@@ -1,0 +1,197 @@
+---
+title: カスタムHooks
+description: 再利用可能なカスタムフックを作成してロジックをコンポーネントから分離する
+---
+
+## カスタムフックとは
+
+**カスタムフック**はuseから始まる名前を持つ関数で、内部でReactのフックを使います。コンポーネントのロジックを抽出・再利用するための仕組みです。
+
+## なぜカスタムフックを使うか
+
+コンポーネントにロジックが増えてくると、複数のコンポーネントで同じロジックが重複することがあります：
+
+```jsx
+// 重複したロジック
+function UserProfile({ userId }) {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    // データ取得ロジック...
+  }, [userId]);
+
+  return /* ... */;
+}
+
+function UserPosts({ userId }) {
+  const [posts, setPosts] = useState(null);
+  const [loading, setLoading] = useState(true); // 同じロジック！
+  const [error, setError] = useState(null);     // 同じロジック！
+
+  useEffect(() => {
+    // ほぼ同じデータ取得ロジック...
+  }, [userId]);
+
+  return /* ... */;
+}
+```
+
+カスタムフックに抽出することで解決できます。
+
+## useFetchフックの作成
+
+```jsx
+// hooks/useFetch.js
+import { useState, useEffect } from "react";
+
+function useFetch(url) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!url) return;
+
+    const controller = new AbortController();
+
+    async function fetchData() {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await fetch(url, { signal: controller.signal });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        setData(await res.json());
+      } catch (e) {
+        if (e.name !== "AbortError") setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+    return () => controller.abort();
+  }, [url]);
+
+  return { data, loading, error };
+}
+
+// 使い方
+function UserProfile({ userId }) {
+  const { data: user, loading, error } = useFetch(`/api/users/${userId}`);
+
+  if (loading) return <Spinner />;
+  if (error) return <ErrorMessage message={error} />;
+  return <div>{user.name}</div>;
+}
+```
+
+## useLocalStorageフック
+
+```jsx
+function useLocalStorage(key, initialValue) {
+  const [value, setValue] = useState(() => {
+    try {
+      const stored = localStorage.getItem(key);
+      return stored ? JSON.parse(stored) : initialValue;
+    } catch {
+      return initialValue;
+    }
+  });
+
+  const setStoredValue = (newValue) => {
+    setValue(newValue);
+    localStorage.setItem(key, JSON.stringify(newValue));
+  };
+
+  return [value, setStoredValue];
+}
+
+// 使い方
+function ThemeToggle() {
+  const [theme, setTheme] = useLocalStorage("theme", "light");
+
+  return (
+    <button onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
+      現在: {theme}
+    </button>
+  );
+}
+```
+
+## useWindowSizeフック
+
+```jsx
+function useWindowSize() {
+  const [size, setSize] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
+
+  useEffect(() => {
+    const handleResize = () => setSize({
+      width: window.innerWidth,
+      height: window.innerHeight,
+    });
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  return size;
+}
+
+// 使い方
+function ResponsiveComponent() {
+  const { width } = useWindowSize();
+  return <p>{width >= 768 ? "PC表示" : "モバイル表示"}</p>;
+}
+```
+
+## useDebounceフック
+
+```jsx
+function useDebounce(value, delay = 300) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
+// 検索入力の遅延処理
+function SearchInput() {
+  const [input, setInput] = useState("");
+  const debouncedInput = useDebounce(input, 500);
+
+  useEffect(() => {
+    if (debouncedInput) {
+      // 500ms入力が止まったら検索を実行
+      searchAPI(debouncedInput);
+    }
+  }, [debouncedInput]);
+
+  return (
+    <input
+      value={input}
+      onChange={(e) => setInput(e.target.value)}
+      placeholder="検索..."
+    />
+  );
+}
+```
+
+<Callout type="tip" title="カスタムフックの命名規則">
+カスタムフックは必ず`use`で始める名前にします。これはReactのルールで、`use`から始まる関数のみフック内でフックを使えることをReactが検知できるからです。`useFetch`、`useAuth`、`useModal`などが一般的なパターンです。
+</Callout>
+
+## まとめ
+
+- カスタムフックはロジックを再利用するための関数（`use`始まり）
+- `useState`・`useEffect`など既存のフックを内部で使える
+- コンポーネントからロジックを分離して可読性・再利用性を向上
+- よくあるパターン: useFetch・useLocalStorage・useWindowSize・useDebounce

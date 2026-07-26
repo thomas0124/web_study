@@ -1,0 +1,144 @@
+---
+title: SEO基礎
+description: 検索エンジン最適化の基本概念・メタタグ・構造化データ・Core Web VitalsのSEOへの影響を学ぶ
+---
+
+## SEOとは
+
+**SEO（Search Engine Optimization）**は検索エンジンの検索結果で上位に表示されるようサイトを最適化することです。
+
+Googleがページを評価する主な要素：
+1. **コンテンツの質と関連性**: ユーザーの検索意図に応えているか
+2. **技術的パフォーマンス**: Core Web Vitals・モバイル対応
+3. **被リンク**: 他の信頼性の高いサイトからリンクされているか
+
+## メタタグ
+
+```html
+<head>
+  <!-- ページタイトル（最重要・50〜60文字） -->
+  <title>Node.js入門 | WebStudy</title>
+
+  <!-- ページの説明（SERPに表示・150〜160文字） -->
+  <meta name="description"
+    content="Node.jsの基礎からExpress・REST API設計まで実務で使えるバックエンド開発を学べるコースです。" />
+
+  <!-- canonical: 重複コンテンツを防ぐ -->
+  <link rel="canonical" href="https://webstudy.example.com/courses/nodejs" />
+
+  <!-- robots: インデックスしてほしくないページ -->
+  <meta name="robots" content="noindex, nofollow" />
+</head>
+```
+
+## Open Graph（SNSでのシェア最適化）
+
+```html
+<head>
+  <meta property="og:title" content="Node.js入門 | WebStudy" />
+  <meta property="og:description"
+    content="Node.jsの基礎からExpress・REST API設計まで..." />
+  <meta property="og:image" content="https://webstudy.example.com/og/nodejs.png" />
+  <meta property="og:url" content="https://webstudy.example.com/courses/nodejs" />
+  <meta property="og:type" content="article" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Node.js入門 | WebStudy" />
+</head>
+```
+
+## Next.jsでのSEO設定
+
+```typescript
+// app/courses/[slug]/page.tsx
+import type { Metadata } from "next";
+
+export async function generateMetadata({ params }): Promise<Metadata> {
+  const course = await getCourse(params.slug);
+
+  return {
+    title: `${course.title} | WebStudy`,
+    description: course.description,
+    openGraph: {
+      title: course.title,
+      description: course.description,
+      images: [`/api/og?title=${encodeURIComponent(course.title)}`],
+    },
+    alternates: {
+      canonical: `https://webstudy.example.com/courses/${params.slug}`,
+    },
+  };
+}
+```
+
+## 構造化データ（Schema.org）
+
+Googleに追加情報を伝えてリッチスニペットを表示させる：
+
+```typescript
+// コースページの構造化データ
+const courseSchema = {
+  "@context": "https://schema.org",
+  "@type": "Course",
+  "name": "Node.js入門",
+  "description": "Node.jsの基礎からExpressまで...",
+  "provider": {
+    "@type": "Organization",
+    "name": "WebStudy",
+  },
+  "hasCourseInstance": {
+    "@type": "CourseInstance",
+    "courseMode": "online",
+    "instructor": {
+      "@type": "Person",
+      "name": "田中太郎"
+    }
+  }
+};
+
+export default function CoursePage() {
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(courseSchema) }}
+      />
+      {/* コンテンツ */}
+    </>
+  );
+}
+```
+
+## サイトマップ
+
+```typescript
+// app/sitemap.ts
+import type { MetadataRoute } from "next";
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const courses = await getCourses();
+
+  return [
+    { url: "https://webstudy.example.com", lastModified: new Date() },
+    ...courses.map((course) => ({
+      url: `https://webstudy.example.com/courses/${course.slug}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+    })),
+  ];
+}
+```
+
+<Callout type="tip" title="SEOの本質はユーザーのためのコンテンツ">
+最も効果的なSEO対策は「ユーザーにとって価値あるコンテンツを作ること」です。キーワードを詰め込んだり、AI生成の薄いコンテンツを大量投稿するのはGoogleのペナルティ対象になります。ユーザーの疑問に答える良質なコンテンツが長期的に評価されます。
+</Callout>
+
+## まとめ
+
+- titleとdescriptionメタタグはクリック率に直結する
+- Open Graphタグでソーシャルシェア時の見栄えを最適化
+- Next.jsの`generateMetadata`でページごとに動的なメタタグを設定
+- 構造化データでGoogleにページの内容を詳しく伝える
+- sitemap.tsで全ページをGoogleに伝える

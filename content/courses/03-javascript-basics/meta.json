@@ -1,0 +1,8 @@
+{
+  "slug": "javascript-basics",
+  "title": "JavaScript入門",
+  "description": "Webを動かすプログラミング言語JavaScriptの基礎。変数・関数・DOM操作・イベント処理を習得し、インタラクティブなWebページを作れるようになる。",
+  "level": "入門",
+  "order": 3,
+  "lessonCount": 8
+}

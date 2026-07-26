@@ -1,0 +1,8 @@
+{
+  "slug": "web-basics",
+  "title": "Webの仕組み",
+  "description": "インターネットとWebの基礎を学ぶ。HTTPの仕組み、DNSの役割、ブラウザが画面を表示するまでの流れを理解する。",
+  "level": "入門",
+  "order": 1,
+  "lessonCount": 6
+}

@@ -1,0 +1,152 @@
+---
+title: バックエンドエラーハンドリング
+description: Expressでの一元的なエラーハンドリング・カスタムエラークラス・ロギングを実装する
+---
+
+## バックエンドのエラー管理
+
+本番環境のAPIで重要なのは：
+1. エラー情報を安全に（内部情報を漏らさない）
+2. 一貫したエラーレスポンス形式
+3. 全エラーのログ記録
+4. 想定内外のエラーを区別する
+
+## カスタムエラークラス
+
+```javascript
+// errors.js
+export class AppError extends Error {
+  constructor(message, statusCode = 500, code = "INTERNAL_ERROR") {
+    super(message);
+    this.name = "AppError";
+    this.statusCode = statusCode;
+    this.code = code;
+    this.isOperational = true; // 想定済みエラーのフラグ
+  }
+}
+
+export class NotFoundError extends AppError {
+  constructor(resource = "リソース") {
+    super(`${resource}が見つかりません`, 404, "NOT_FOUND");
+  }
+}
+
+export class ValidationError extends AppError {
+  constructor(message, details = []) {
+    super(message, 422, "VALIDATION_ERROR");
+    this.details = details;
+  }
+}
+
+export class UnauthorizedError extends AppError {
+  constructor(message = "認証が必要です") {
+    super(message, 401, "UNAUTHORIZED");
+  }
+}
+
+export class ForbiddenError extends AppError {
+  constructor(message = "権限がありません") {
+    super(message, 403, "FORBIDDEN");
+  }
+}
+```
+
+## グローバルエラーハンドラ
+
+```javascript
+// middleware/errorHandler.js
+export function errorHandler(err, req, res, next) {
+  // ロギング
+  if (err.isOperational) {
+    console.warn(`[${req.method} ${req.url}] ${err.message}`);
+  } else {
+    console.error("想定外のエラー:", err);
+  }
+
+  // 開発・本番でレスポンスを変える
+  const isDev = process.env.NODE_ENV !== "production";
+
+  if (err instanceof AppError) {
+    return res.status(err.statusCode).json({
+      error: {
+        code: err.code,
+        message: err.message,
+        ...(err.details && { details: err.details }),
+        ...(isDev && { stack: err.stack }), // 開発時のみスタック
+      },
+    });
+  }
+
+  // 想定外のエラー（DBエラーなど）
+  res.status(500).json({
+    error: {
+      code: "INTERNAL_ERROR",
+      message: isDev ? err.message : "サーバーエラーが発生しました",
+      ...(isDev && { stack: err.stack }),
+    },
+  });
+}
+```
+
+## async/awaitのエラーをキャッチ
+
+```javascript
+// wrapper関数でtry/catchを省略
+function asyncHandler(fn) {
+  return (req, res, next) => {
+    Promise.resolve(fn(req, res, next)).catch(next); // nextにエラーを渡す
+  };
+}
+
+// 使い方
+app.get("/users/:id", asyncHandler(async (req, res) => {
+  const user = await db.users.findById(req.params.id);
+  if (!user) throw new NotFoundError("ユーザー");
+  res.json(user);
+}));
+// エラーは自動的にerrorHandlerに渡される
+```
+
+## ロギング（winston）
+
+```javascript
+import winston from "winston";
+
+const logger = winston.createLogger({
+  level: process.env.LOG_LEVEL || "info",
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.errors({ stack: true }),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.Console(),
+    new winston.transports.File({ filename: "logs/error.log", level: "error" }),
+    new winston.transports.File({ filename: "logs/combined.log" }),
+  ],
+});
+
+// エラーハンドラでロガーを使う
+export function errorHandler(err, req, res, next) {
+  logger.error({
+    message: err.message,
+    code: err.code,
+    path: req.url,
+    method: req.method,
+    stack: err.stack,
+  });
+  // ...
+}
+```
+
+<Callout type="warning" title="本番環境でスタックトレースを返さない">
+スタックトレースにはサーバーの内部実装情報が含まれます。攻撃者にとって有益な情報になるため、本番環境ではエラーの詳細をクライアントに返さないようにします。ログには記録して調査に使います。
+</Callout>
+
+## まとめ
+
+- カスタムエラークラスでエラーの種類と情報を体系化する
+- グローバルエラーハンドラで一元的なエラー処理を行う
+- `asyncHandler`でAsync関数のエラーを自動キャッチ
+- 開発・本番でエラーレスポンスの詳細度を変える
+- winstonなどでエラーをファイルに記録する

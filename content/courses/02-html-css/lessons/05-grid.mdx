@@ -1,0 +1,143 @@
+---
+title: CSS Grid
+description: 2次元レイアウトシステムのCSS Gridを使って複雑なレイアウト��実現する
+---
+
+## CSS Gridとは
+
+**CSS Grid**はCSSの2次元レイアウトシステムです。行（Row）と列（Column）を同時に制御でき、複雑なレイアウトをシンプルなコードで実現できます。
+
+FlexboxとGridの使い分け：
+- **Flexbox**: 1方向（横か縦）の並びを制御 → ナビゲーション・カード並び
+- **Grid**: 縦横両方向の2次元レイアウト → ページ全体のレイアウト・ダッシュボード
+
+## 基本的な使い方
+
+```css
+.container {
+  display: grid;
+  grid-template-columns: 200px 1fr 200px;
+  grid-template-rows: auto 1fr auto;
+  gap: 1rem;
+}
+```
+
+```html
+<div class="container">
+  <div class="item">1</div>
+  <div class="item">2</div>
+  <div class="item">3</div>
+  <div class="item">4</div>
+</div>
+```
+
+## grid-template-columns / rows
+
+```css
+/* 固定幅の3列 */
+grid-template-columns: 200px 200px 200px;
+
+/* frユニット（使用可能スペースを分割） */
+grid-template-columns: 1fr 2fr 1fr; /* 1:2:1の比率 */
+
+/* repeat()で繰り返し */
+grid-template-columns: repeat(3, 1fr); /* 等幅3列 */
+
+/* auto-fillで自動的な列数 */
+grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+```
+
+`fr`はfraction（分数）の略で、残りのスペースを分割するユニットです。
+
+## gridエリアで直感的なレイアウト
+
+名前を付けたエリアでレイアウトを定義できます：
+
+```css
+.container {
+  display: grid;
+  grid-template-areas:
+    "header header header"
+    "sidebar main    main"
+    "footer footer footer";
+  grid-template-columns: 200px 1fr 1fr;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100vh;
+}
+
+.header  { grid-area: header; }
+.sidebar { grid-area: sidebar; }
+.main    { grid-area: main; }
+.footer  { grid-area: footer; }
+```
+
+```html
+<div class="container">
+  <header class="header">Header</header>
+  <aside class="sidebar">Sidebar</aside>
+  <main class="main">Main</main>
+  <footer class="footer">Footer</footer>
+</div>
+```
+
+<Callout type="tip" title="grid-template-areasは地図のよう">
+grid-template-areasの文字列はレイアウトの地図です。同じ名前のエリアは結合され、`.`は空きスペースを表します。視覚的にレイアウトが分かるので可読性が高いです。
+</Callout>
+
+## アイテムの配置
+
+```css
+.item {
+  /* 列の開始〜終了ライン */
+  grid-column: 1 / 3;       /* 列1から3まで（2列分） */
+  grid-column: 1 / -1;      /* 全列幅 */
+  grid-column: span 2;      /* 2列分の幅 */
+
+  /* 行の開始〜終了ライン */
+  grid-row: 2 / 4;
+}
+```
+
+## gap（間隔）
+
+```css
+.container {
+  gap: 1rem;           /* 行・列の間隔を同じに */
+  row-gap: 1rem;       /* 行間 */
+  column-gap: 2rem;    /* 列間 */
+}
+```
+
+## align-items と justify-items
+
+```css
+.container {
+  align-items: start | end | center | stretch;    /* 縦方向 */
+  justify-items: start | end | center | stretch;  /* 横方向 */
+}
+
+/* 個別のアイテムは align-self / justify-self */
+.item {
+  align-self: center;
+  justify-self: end;
+}
+```
+
+## レスポンシブなカードグリッド
+
+```css
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+```
+
+`auto-fill`と`minmax()`の組み合わせで、画面幅に応じて自動的に列数が変わるレスポンシブグリッドが作れます。メディアクエリ不要です。
+
+## まとめ
+
+- CSS Gridは2次元レイアウトに最適
+- `grid-template-columns`でfrや`repeat()`を使って柔軟な列定義
+- `grid-template-areas`でレイアウトを視覚的に表現できる
+- `auto-fill + minmax()`でレスポンシブなグリッドを簡単に作れる
