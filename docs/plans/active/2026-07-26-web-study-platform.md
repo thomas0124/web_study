@@ -188,6 +188,6 @@ web_study/
 - [x] `pnpm tsc --noEmit` + `pnpm lint` パス
 - [x] `/self-review` 完了（docs/reports/self-review-2026-07-26.md）
 - [x] `/verify` 完了（docs/reports/verify-2026-07-26.md）
-- [ ] `/test` 完了
-- [ ] `/sync-docs` 完了
+- [x] `/test` 完了（docs/reports/test-2026-07-26.md）
+- [x] `/sync-docs` 完了（docs/reports/sync-docs-2026-07-26.md）
 - [ ] `/pr` 作成済み
