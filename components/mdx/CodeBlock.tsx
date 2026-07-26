@@ -132,12 +132,18 @@ export default function CodeBlock({ children }: CodeBlockProps) {
           />
           {isVanilla ? (
             <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 11, padding: "3px 10px", background: "#151515", color: "#666", borderBottom: "1px solid #2d2d2d", flex: "none", letterSpacing: "0.05em" }}>
+                DOM 出力（document.body への変更がここに表示されます）
+              </div>
               <SandpackPreview
                 showNavigator={false}
-                style={{ height: 180, flex: "none" }}
+                style={{ height: 165, flex: "none" }}
               />
+              <div style={{ fontSize: 11, padding: "3px 10px", background: "#151515", color: "#666", borderTop: "1px solid #2d2d2d", borderBottom: "1px solid #2d2d2d", flex: "none", letterSpacing: "0.05em" }}>
+                コンソール出力（console.log の結果がここに表示されます）
+              </div>
               <SandpackConsole
-                style={{ height: 100, flex: "none", borderTop: "1px solid #2d2d2d" }}
+                style={{ height: 90, flex: "none" }}
               />
             </div>
           ) : (
