@@ -6,8 +6,9 @@ Web未経験者から仕事で使えるエンジニアを目指す日本語学�
 
 - **Next.js 15** (App Router + Static Export)
 - **TypeScript** (strict mode)
-- **Tailwind CSS**
+- **Tailwind CSS** (+ `@tailwindcss/typography`)
 - **MDX** (next-mdx-remote/rsc + gray-matter)
+- **Sandpack** (`@codesandbox/sandpack-react`) — JS/TS/JSX/TSX/HTML コードブロックをブラウザ上で実行・編集できるライブエディタに自動変換
 
 ## セットアップ
 

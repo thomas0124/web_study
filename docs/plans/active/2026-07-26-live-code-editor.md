@@ -120,8 +120,14 @@ app/globals.css           ← Sandpack の CSS を import（必要なら）
 - [x] スライス2: CodeBlock コンポーネント実装
 - [x] スライス3: MDX components 組み込み・ビルド確認
 - [x] `pnpm tsc --noEmit` + `pnpm lint` パス
-- [ ] `/self-review` 完了
-- [ ] `/verify` 完了
-- [ ] `/test` 完了
-- [ ] `/sync-docs` 完了
+- [x] `/self-review` 完了（`docs/reports/self-review-2026-07-26-live-code-editor.md`）
+- [x] `/verify` 完了（`docs/reports/verify-2026-07-26-live-code-editor.md`）
+- [x] `/test` 完了（`docs/reports/test-2026-07-26-live-code-editor.md`）
+- [x] `/sync-docs` 完了
 - [ ] `/pr` 作成済み
+
+## 追加修正（要件3: レンダリング問題）
+
+- [x] `@tailwindcss/typography` インストール・登録（prose クラスによるテーブル・見出しスタイリング）
+- [x] `Noto Sans JP` フォント追加（日本語文字の正確なレンダリング）
+- [x] インラインコードの色を `text-pink-600` → `text-gray-800 dark:text-gray-200` に修正
